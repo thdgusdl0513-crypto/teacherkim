@@ -110,6 +110,7 @@ async function post(o) { const r = await fetch(API, { method: "POST", headers: {
 
 async function load() {
   if (!API) { msg($("top"), "신청 주소가 연결되지 않았어요. 선생님께 받은 링크로 다시 접속해 주세요.", false); return; }
+  $("cal").innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#64748b;padding:24px 0">달력을 불러오는 중…</p>';
   try {
     const j = await get();
     if (!j.ok) throw new Error(j.error || "불러오기 실패");
@@ -119,7 +120,8 @@ async function load() {
     // 가장 가까운 상담 가능 날짜의 달을 먼저 보여주기
     const first = slots.filter(s => !s.taken).map(s => s.date).sort()[0];
     if (first) { month = new Date(first + "T00:00:00"); month.setDate(1); }
-    drawCal();
+    if (first && !selDate) selDate = first;
+    drawCal(); drawSlots();
   } catch (e) { msg($("top"), "시간표를 불러오지 못했어요: " + e.message, false); }
 }
 
