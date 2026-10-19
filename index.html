@@ -5,66 +5,84 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>상담 신청</title>
 <meta name="description" content="학생 상담 시간 신청 페이지">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#f2fbfc; --card:#fff; --ink:#17323d; --sub:#5b7480; --line:#cfe6ea; --accent:#0e8fa8; --accent-soft:#dff4f8; --ok:#0d9488; --ok-soft:#d9f5ee; --warn:#d64545; --warn-soft:#fdeaea; --chip:#e6f4f7; }
+  :root { --bg:#fff8e1; --card:#ffffff; --ink:#3b2f4a; --sub:#6e6080; --line:#e4d9fb; --yellow:#ffd23f; --yellow-soft:#fff2b3; --orange:#ffb27a; --orange-soft:#ffe6d1; --lav:#ede5ff; --lav-mid:#c9b6f5; --lav-deep:#6a4bc4; --ok:#1f8a5b; --ok-soft:#dcf5e8; --warn:#c2410c; --warn-soft:#ffe4d6; --heading:"Jua","Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif; }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif; line-height:1.5; }
+  body { margin:0; background:var(--bg); background-image:radial-gradient(var(--yellow-soft) 2px,transparent 2px); background-size:26px 26px; color:var(--ink); font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif; font-size:17px; line-height:1.6; }
   button, input, textarea { font:inherit; color:inherit; }
   button { cursor:pointer; }
-  .wrap { max-width:880px; margin:0 auto; padding:20px 16px 56px; }
-  h1 { font-size:20px; margin:0 0 4px; }
-  .sub { color:var(--sub); font-size:13px; margin:0 0 16px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; }
-  .cal-head { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:10px; }
-  .cal-head b { font-size:17px; min-width:120px; text-align:center; }
-  .arrow { width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:#fff; }
-  .grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-  .dow { text-align:center; font-size:12px; font-weight:700; color:var(--sub); padding:4px 0; }
-  .day { border:1px solid var(--line); border-radius:10px; min-height:58px; padding:4px 5px; background:#fff; text-align:left; font-size:12px; }
-  .day.off { background:#f3f6f7; color:#aab8be; border-color:#e8eef0; cursor:default; }
-  .day.has { border-color:var(--accent); background:var(--accent-soft); }
-  .day.sel { outline:2px solid var(--accent); }
-  .day.today .n { background:var(--accent); color:#fff; border-radius:999px; padding:0 6px; }
-  .day .cnt { display:block; margin-top:3px; color:var(--accent); font-weight:700; font-size:11px; }
-  .slots { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; margin-top:8px; }
-  .slot { border:1px solid var(--line); background:#fff; border-radius:12px; padding:10px; text-align:left; }
-  .slot b { display:block; font-size:15px; }
-  .slot span { font-size:12px; color:var(--sub); }
-  .slot.sel { border:2px solid var(--accent); background:var(--accent-soft); }
-  .slot.full { background:#f3f6f7; color:#9aa9b0; cursor:not-allowed; }
-  label { display:block; font-size:13px; font-weight:700; margin-top:10px; }
-  input, textarea { width:100%; margin-top:4px; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:16px; background:#fff; }
-  .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .btn { background:var(--accent); color:#fff; border:0; border-radius:12px; padding:12px 16px; font-weight:700; width:100%; margin-top:14px; }
-  .btn.sec { background:#fff; color:var(--ink); border:1px solid var(--line); }
+  .wrap { max-width:760px; margin:0 auto; padding:22px 16px 64px; }
+  .hero { background:linear-gradient(135deg,var(--yellow) 0%,var(--orange) 100%); border-radius:26px; padding:22px 22px 20px; margin-bottom:18px; box-shadow:0 6px 0 rgba(106,75,196,.18); position:relative; overflow:hidden; }
+  .hero::after { content:"💬"; position:absolute; right:14px; top:6px; font-size:38px; opacity:.9; transform:rotate(8deg); }
+  .hero h1, .hero .sub { padding-right:44px; }
+  h1 { font-family:var(--heading); font-weight:400; font-size:30px; margin:0 0 6px; color:#3b2f4a; }
+  .sub { color:#4a3b5c; font-size:16px; margin:0; max-width:34em; }
+  .sub b { background:#fff; border-radius:8px; padding:0 6px; }
+  .card { background:var(--card); border:2px solid var(--line); border-radius:22px; padding:18px; margin-bottom:18px; box-shadow:0 5px 0 var(--lav); }
+  .step { display:inline-flex; align-items:center; gap:8px; font-family:var(--heading); font-size:21px; margin:0 0 12px; }
+  .step i { font-style:normal; background:var(--lav-deep); color:#fff; width:30px; height:30px; border-radius:50%; display:inline-grid; place-items:center; font-size:17px; }
+  .cal-head { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:12px; }
+  .cal-head b { font-family:var(--heading); font-weight:400; font-size:23px; min-width:130px; text-align:center; }
+  .arrow { width:44px; height:44px; border-radius:50%; border:2px solid var(--lav-mid); background:var(--lav); color:var(--lav-deep); font-size:16px; }
+  .arrow:active { background:var(--lav-mid); }
+  .grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .dow { text-align:center; font-size:15px; font-weight:800; color:var(--lav-deep); padding:4px 0; }
+  .dow:first-child { color:#d9552b; }
+  .day { border:2px solid var(--line); border-radius:14px; min-height:66px; padding:5px 1px; background:#fff; text-align:center; font-size:16px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .day.off { background:#faf7ff; color:#c3b8d8; border-color:#f0eaff; cursor:default; font-weight:400; }
+  .day.has { border-color:var(--orange); background:var(--orange-soft); }
+  .day.sel { background:var(--yellow); border-color:var(--lav-deep); box-shadow:0 0 0 3px var(--lav-mid); }
+  .day.today .n { background:var(--lav-deep); color:#fff; border-radius:999px; padding:0 8px; }
+  .day .cnt { display:block; white-space:nowrap; color:#b4470c; font-weight:800; font-size:12px; line-height:1.2; }
+  .day.sel .cnt { color:#3b2f4a; }
+  .slots { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:10px; margin-top:6px; }
+  .slot { border:2px solid var(--orange); background:var(--orange-soft); border-radius:16px; padding:12px 14px; text-align:left; }
+  .slot b { display:block; font-size:19px; }
+  .slot span { font-size:15px; color:var(--sub); }
+  .slot.sel { border-color:var(--lav-deep); background:var(--yellow); box-shadow:0 0 0 3px var(--lav-mid); }
+  .slot.full { background:#f5f1fb; border-color:#e7e0f5; color:#a79bbd; cursor:not-allowed; }
+  label { display:block; font-size:16px; font-weight:800; margin-top:14px; }
+  input, textarea { width:100%; margin-top:6px; border:2px solid var(--lav-mid); border-radius:14px; padding:12px 14px; font-size:18px; background:#fff; }
+  input:focus, textarea:focus { outline:none; border-color:var(--lav-deep); box-shadow:0 0 0 3px var(--lav); }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .btn { background:var(--yellow); color:#3b2f4a; border:2px solid #3b2f4a; border-radius:16px; padding:14px 18px; font-size:19px; font-weight:800; width:100%; margin-top:18px; box-shadow:0 4px 0 #3b2f4a; }
+  .btn:active { transform:translateY(3px); box-shadow:0 1px 0 #3b2f4a; }
+  .btn.sec { background:var(--lav); }
   .btn:disabled { opacity:.5; cursor:not-allowed; }
-  .msg { font-size:13px; margin-top:10px; padding:9px 12px; border-radius:10px; }
+  .msg { font-size:16px; margin-top:12px; padding:12px 14px; border-radius:14px; font-weight:600; }
   .msg.ok { background:var(--ok-soft); color:var(--ok); }
   .msg.err { background:var(--warn-soft); color:var(--warn); }
-  .hint { font-size:12px; color:var(--sub); margin:6px 0 0; }
-  .req { border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:8px; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
-  .tag { font-size:12px; font-weight:700; padding:2px 9px; border-radius:999px; background:var(--chip); }
+  .hint { font-size:14.5px; color:var(--sub); margin:6px 0 0; }
+  .req { border:2px solid var(--line); background:#fcfaff; border-radius:16px; padding:12px 14px; margin-top:10px; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
+  .tag { font-size:14.5px; font-weight:800; padding:3px 12px; border-radius:999px; background:var(--yellow-soft); color:#7a5a00; }
   .tag.승인 { background:var(--ok-soft); color:var(--ok); }
   .tag.거절, .tag.취소 { background:var(--warn-soft); color:var(--warn); }
-  .small { border:1px solid var(--line); background:#fff; border-radius:8px; padding:4px 10px; font-size:12px; }
-  details summary { cursor:pointer; font-weight:700; }
+  .small { border:2px solid var(--lav-mid); background:#fff; border-radius:10px; padding:5px 12px; font-size:15px; font-weight:700; }
+  details summary { cursor:pointer; font-family:var(--heading); font-size:21px; }
+  @media (max-width:420px) { .row { grid-template-columns:1fr; } .grid { gap:4px; } .day { min-height:60px; font-size:15px; } h1 { font-size:26px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1 id="title">상담 신청</h1>
-  <p class="sub">날짜를 누르고 가능한 시간을 골라 신청하세요. 선생님이 <b>승인하면 확정</b>됩니다. 아래 "내 신청 확인"에서 결과를 볼 수 있어요.</p>
+  <div class="hero">
+    <h1 id="title">상담 신청</h1>
+    <p class="sub">날짜를 누르고 가능한 시간을 골라 신청하세요. 선생님이 <b>승인하면 확정</b>돼요. 맨 아래 "내 신청 확인"에서 결과를 볼 수 있어요.</p>
+  </div>
   <div id="top"></div>
 
   <div class="card">
+    <div class="step"><i>1</i>날짜를 골라요 📅</div>
     <div class="cal-head"><button class="arrow" id="prev" aria-label="이전 달">◀</button><b id="monthLabel"></b><button class="arrow" id="next" aria-label="다음 달">▶</button></div>
     <div class="grid" id="cal"></div>
   </div>
 
   <div class="card" id="slotCard" hidden>
-    <b id="slotTitle"></b>
+    <div class="step"><i>2</i><span id="slotTitle"></span></div>
     <div class="slots" id="slots"></div>
     <div id="formBox" hidden>
+      <div class="step" style="margin-top:16px"><i>3</i>내 정보를 적어요 ✏️</div>
       <div class="row">
         <label>학번<input id="no" inputmode="numeric" maxlength="6" placeholder="예: 10107" autocomplete="off"></label>
         <label>이름<input id="name" maxlength="10" autocomplete="off"></label>
@@ -72,14 +90,14 @@
       <label>상담하고 싶은 내용 (선택)<textarea id="topic" rows="3" maxlength="200" placeholder="예: 진로 고민이 있어요"></textarea></label>
       <label>확인용 비밀번호 (숫자 4자리)<input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
       <p class="hint">신청 결과를 확인하거나 취소할 때 필요해요. 친구에게 알려주지 마세요.</p>
-      <button class="btn" id="send">신청하기</button>
+      <button class="btn" id="send">🎉 신청하기</button>
       <div id="sendMsg"></div>
     </div>
   </div>
 
   <div class="card">
     <details id="myDet">
-      <summary>내 신청 확인 · 취소</summary>
+      <summary>🔍 내 신청 확인 · 취소</summary>
       <div class="row">
         <label>학번<input id="mno" inputmode="numeric" maxlength="6" autocomplete="off"></label>
         <label>이름<input id="mname" maxlength="10" autocomplete="off"></label>
@@ -110,7 +128,7 @@ async function post(o) { const r = await fetch(API, { method: "POST", headers: {
 
 async function load() {
   if (!API) { msg($("top"), "신청 주소가 연결되지 않았어요. 선생님께 받은 링크로 다시 접속해 주세요.", false); return; }
-  $("cal").innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#64748b;padding:24px 0">달력을 불러오는 중…</p>';
+  $("cal").innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#6e6080;font-size:17px;padding:28px 0">달력을 불러오는 중…</p>';
   try {
     const j = await get();
     if (!j.ok) throw new Error(j.error || "불러오기 실패");
@@ -136,7 +154,7 @@ function drawCal() {
     const ds = `${y}-${pad(m + 1)}-${pad(d)}`, open = slots.filter(s => s.date === ds && !s.taken).length, all = slots.filter(s => s.date === ds).length;
     const b = document.createElement("button");
     b.className = "day" + (all ? " has" : " off") + (ds === selDate ? " sel" : "") + (ds === today ? " today" : "");
-    b.innerHTML = `<span class="n">${d}</span>` + (all ? `<span class="cnt">${open ? open + "자리 남음" : "마감"}</span>` : "");
+    b.innerHTML = `<span class="n">${d}</span>` + (all ? `<span class="cnt">${open ? open + "자리" : "마감"}</span>` : "");
     if (all) b.onclick = () => { selDate = ds; selSlot = null; drawCal(); drawSlots(); };
     cal.appendChild(b);
   }
@@ -146,7 +164,7 @@ function drawSlots() {
   $("slotCard").hidden = !selDate;
   if (!selDate) return;
   const d = new Date(selDate + "T00:00:00");
-  $("slotTitle").textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) 상담 시간`;
+  $("slotTitle").textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) 시간을 골라요 ⏰`;
   const box = $("slots"); box.innerHTML = "";
   slots.filter(s => s.date === selDate).sort((a, b) => a.start.localeCompare(b.start)).forEach(s => {
     const b = document.createElement("button");
