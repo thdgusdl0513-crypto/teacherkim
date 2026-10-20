@@ -14,11 +14,11 @@
   button, input, textarea { font:inherit; color:inherit; }
   button { cursor:pointer; }
   .wrap { max-width:760px; margin:0 auto; padding:22px 16px 64px; }
-  .hero { background:var(--yellow); border-radius:26px; padding:22px 22px 20px; margin-bottom:18px; box-shadow:0 6px 0 #ffb3d4; position:relative; overflow:hidden; }
+  .hero { background:#cdeeb0; border-radius:26px; padding:22px 22px 20px; margin-bottom:18px; box-shadow:0 6px 0 #9ed36a; position:relative; overflow:hidden; }
   .hero::after { content:"💬"; position:absolute; right:16px; top:10px; font-size:30px; opacity:.9; transform:rotate(8deg); }
   .hero .sub { padding-right:0; margin-bottom:26px; }
   h1 { font-family:var(--heading); font-weight:400; font-size:30px; padding-right:40px; margin:0 0 6px; color:#3b2f4a; }
-  .sub { color:#4a3b5c; font-size:16px; margin:0; max-width:34em; }
+  .sub { color:#2f4a2a; font-size:16px; margin:0; max-width:34em; }
   .sub b { background:#fff; border-radius:8px; padding:0 6px; }
   .card { background:var(--card); border:2px solid var(--line); border-radius:22px; padding:18px; margin-bottom:18px; box-shadow:0 5px 0 var(--lav); }
   .step { display:inline-flex; align-items:center; gap:8px; font-family:var(--heading); font-size:21px; margin:0 0 12px; }
@@ -37,7 +37,7 @@
   .day.today .n { background:var(--lav-deep); color:#fff; border-radius:999px; padding:0 8px; }
   .day .cnt { display:block; white-space:nowrap; color:#c2185b; font-weight:800; font-size:12px; line-height:1.2; }
   .day.sel .cnt { color:#3b2f4a; }
-  #slotCard { background:var(--green-soft); border-color:var(--green); box-shadow:0 5px 0 var(--green-mid); }
+  #slotCard { position:relative; background:var(--green-soft); border-color:var(--green); box-shadow:0 5px 0 var(--green-mid); }
   #slotCard .step i { background:var(--green-deep); }
   #slotCard input, #slotCard textarea { border-color:var(--green); }
   #slotCard input:focus, #slotCard textarea:focus { border-color:var(--green-deep); box-shadow:0 0 0 3px var(--green-mid); }
@@ -90,15 +90,15 @@
     <div class="step"><i>2</i><span id="slotTitle"></span></div>
     <div class="slots" id="slots"></div>
     <div id="formBox" hidden>
-      <div class="step" style="margin-top:16px"><i>3</i>✏️ 내 정보를 적어요</div>
+      <div class="step" style="margin-top:16px"><i>3</i>🌱 내 정보를 적어요</div>
       <div class="row">
-        <label>🎓 학번<input id="no" inputmode="numeric" maxlength="6" placeholder="예: 10107" autocomplete="off"></label>
-        <label>🙂 이름<input id="name" maxlength="10" autocomplete="off"></label>
+        <label>🍀 학번<input id="no" inputmode="numeric" maxlength="6" placeholder="예: 10107" autocomplete="off"></label>
+        <label>🐸 이름<input id="name" maxlength="10" autocomplete="off"></label>
       </div>
-      <label>💭 상담하고 싶은 내용 (선택)<textarea id="topic" rows="3" maxlength="200" placeholder="예: 진로 고민이 있어요"></textarea></label>
-      <label>🔑 확인용 비밀번호 (숫자 4자리)<input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
-      <p class="hint">🤫 신청 결과를 확인하거나 취소할 때 필요해요. 친구에게 알려주지 마세요.</p>
-      <button class="btn" id="send">🎉 신청하기</button>
+      <label>🌿 상담하고 싶은 내용 (선택)<textarea id="topic" rows="3" maxlength="200" placeholder="예: 진로 고민이 있어요"></textarea></label>
+      <label>🥝 확인용 비밀번호 (숫자 4자리)<input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+      <p class="hint">🍃 신청 결과를 확인하거나 취소할 때 필요해요. 친구에게 알려주지 마세요.</p>
+      <button class="btn" id="send">🍀 신청하기</button>
       <div id="sendMsg"></div>
     </div>
   </div>
@@ -172,12 +172,12 @@ function drawSlots() {
   $("slotCard").hidden = !selDate;
   if (!selDate) return;
   const d = new Date(selDate + "T00:00:00");
-  $("slotTitle").textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) 시간을 골라요 ⏰`;
+  $("slotTitle").textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) 시간을 골라요 🍀`;
   const box = $("slots"); box.innerHTML = "";
   slots.filter(s => s.date === selDate).sort((a, b) => a.start.localeCompare(b.start)).forEach(s => {
     const b = document.createElement("button");
     b.className = "slot" + (s.taken ? " full" : "") + (selSlot && selSlot.id === s.id ? " sel" : "");
-    b.innerHTML = `<b>${s.taken ? "🔒" : "🕓"} ${s.start} ~ ${s.end}</b><span>${s.name || "상담"}${s.taken ? " · 마감" : " · 신청 가능"}</span>`;
+    b.innerHTML = `<b>${s.taken ? "🔒" : "🌿"} ${s.start} ~ ${s.end}</b><span>${s.name || "상담"}${s.taken ? " · 마감" : " · 신청 가능"}</span>`;
     if (!s.taken) b.onclick = () => { selSlot = s; drawSlots(); };
     box.appendChild(b);
   });
@@ -200,7 +200,7 @@ $("send").onclick = async () => {
     $("topic").value = ""; $("pin").value = "";
     $("mno").value = no; $("mname").value = name;
     selSlot = null; await load(); drawSlots(); $("formBox").hidden = true;
-    msg($("sendMsg"), "🎉 신청이 접수됐어요! 선생님이 승인하면 확정됩니다. 아래 '내 신청 확인'에서 결과를 볼 수 있어요.", true);
+    msg($("sendMsg"), "🍀 신청이 접수됐어요! 선생님이 승인하면 확정됩니다. 아래 '내 신청 확인'에서 결과를 볼 수 있어요.", true);
     $("slotCard").hidden = false; $("sendMsg").scrollIntoView({ behavior: "smooth", block: "center" });
   } catch (e) { msg($("sendMsg"), e.message, false); await load(); drawSlots(); $("formBox").hidden = !selSlot; }
   $("send").disabled = false;
@@ -219,7 +219,7 @@ async function myList() {
       const l = document.createElement("div"); l.innerHTML = `<b>${r.date} ${r.start}~${r.end}</b> <span class="hint">${r.slot || ""}</span>${r.topic ? `<div class="hint"></div>` : ""}`;
       if (r.topic) l.lastChild.textContent = r.topic;
       const rt = document.createElement("div"); rt.style.cssText = "display:flex;gap:8px;align-items:center";
-      const t = document.createElement("span"); t.className = "tag " + r.status; t.textContent = r.status === "대기" ? "⏳ 승인 대기" : r.status === "승인" ? "✅ 승인" : r.status === "거절" ? "❌ 거절" : r.status === "취소" ? "🚫 취소" : r.status; rt.appendChild(t);
+      const t = document.createElement("span"); t.className = "tag " + r.status; t.textContent = r.status === "대기" ? "⏳ 승인 대기" : r.status === "승인" ? "🍀 승인" : r.status === "거절" ? "❌ 거절" : r.status === "취소" ? "🚫 취소" : r.status; rt.appendChild(t);
       if (r.note && r.status !== "대기") { const n = document.createElement("span"); n.className = "hint"; n.textContent = r.note; rt.appendChild(n); }
       if (r.status === "대기" || r.status === "승인") {
         const c = document.createElement("button"); c.className = "small"; c.textContent = "🗑️ 취소";
