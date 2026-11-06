@@ -67,53 +67,59 @@
   .tag.거절, .tag.취소 { background:var(--warn-soft); color:var(--warn); }
   .small { border:2px solid var(--lav-mid); background:#fff; border-radius:10px; padding:5px 12px; font-size:15px; font-weight:700; }
   details summary { cursor:pointer; font-family:var(--heading); font-size:21px; }
-  @media (max-width:420px) { .row { grid-template-columns:1fr; } .grid { gap:4px; } .day { min-height:60px; font-size:15px; } h1 { font-size:26px; } }
+  .langbar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:12px; }
+  .langbar span { font-size:15px; font-weight:800; color:var(--lav-deep); margin-right:2px; }
+  .langbar button { border:2px solid var(--lav-mid); background:#fff; color:var(--ink); border-radius:999px; padding:5px 13px; font-size:14.5px; font-weight:700; line-height:1.3; }
+  .langbar button.on { background:var(--lav-deep); border-color:var(--lav-deep); color:#fff; }
+  .ko-sub { font-weight:400; font-size:13.5px; color:var(--sub); }
+  @media (max-width:420px) { .row { grid-template-columns:1fr; } .grid { gap:4px; } .day { min-height:60px; font-size:15px; } h1 { font-size:26px; } .langbar button { padding:4px 10px; font-size:13.5px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="langbar" id="langbar"><span>🌐</span></div>
   <div class="hero">
     <span class="deco" style="right:64px;bottom:10px">🌸</span><span class="deco" style="right:18px;bottom:8px;font-size:28px">💖</span><span class="deco" style="right:108px;bottom:12px;font-size:18px">✨</span>
     <h1 id="title">🐥 상담 신청</h1>
-    <p class="sub">👆 날짜를 누르고 가능한 시간을 골라 신청하세요. 선생님이 <b>승인하면 확정</b>돼요. 맨 아래 "내 신청 확인"에서 결과를 볼 수 있어요.</p>
+    <p class="sub" id="sub"></p>
   </div>
   <div id="top"></div>
 
   <div class="card">
-    <div class="step"><i>1</i>📅 날짜를 골라요</div>
+    <div class="step"><i>1</i><span id="step1"></span></div>
     <div class="cal-head"><button class="arrow" id="prev" aria-label="이전 달">◀</button><b id="monthLabel"></b><button class="arrow" id="next" aria-label="다음 달">▶</button></div>
     <div class="grid" id="cal"></div>
-    <p class="hint" style="text-align:center">🌸 숫자 = 남은 자리 · 😢 = 마감 · 회색 날짜는 상담이 없는 날</p>
+    <p class="hint" style="text-align:center" id="calHint"></p>
   </div>
 
   <div class="card" id="slotCard" hidden>
     <div class="step"><i>2</i><span id="slotTitle"></span></div>
     <div class="slots" id="slots"></div>
     <div id="formBox" hidden>
-      <div class="step" style="margin-top:16px"><i>3</i>🌱 내 정보를 적어요</div>
+      <div class="step" style="margin-top:16px"><i>3</i><span id="step3"></span></div>
       <div class="row">
-        <label>🍀 학번<input id="no" inputmode="numeric" maxlength="6" placeholder="예: 10107" autocomplete="off"></label>
-        <label>🐸 이름<input id="name" maxlength="10" autocomplete="off"></label>
+        <label><span id="lNo"></span><input id="no" inputmode="numeric" maxlength="6" placeholder="10107" autocomplete="off"></label>
+        <label><span id="lName"></span><input id="name" maxlength="10" autocomplete="off"></label>
       </div>
-      <label>🌿 상담하고 싶은 내용 (선택)<textarea id="topic" rows="3" maxlength="200" placeholder="예: 진로 고민이 있어요"></textarea></label>
-      <label>📬 이메일 (선택)<input id="email" type="email" maxlength="100" placeholder="예: hong@gmail.com" autocomplete="email"></label>
-      <p class="hint">적어 두면 선생님이 승인했을 때 <b>메일로 알려 드려요.</b> 안 적어도 신청은 됩니다.</p>
-      <label>🥝 확인용 비밀번호 (숫자 4자리)<input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
-      <p class="hint">🍃 신청 결과를 확인하거나 취소할 때 필요해요. 친구에게 알려주지 마세요.</p>
-      <button class="btn" id="send">🍀 신청하기</button>
+      <label><span id="lTopic"></span><textarea id="topic" rows="3" maxlength="200"></textarea></label>
+      <label><span id="lEmail"></span><input id="email" type="email" maxlength="100" placeholder="hong@gmail.com" autocomplete="email"></label>
+      <p class="hint" id="emailHint"></p>
+      <label><span id="lPin"></span><input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+      <p class="hint" id="pinHint"></p>
+      <button class="btn" id="send"></button>
       <div id="sendMsg"></div>
     </div>
   </div>
 
   <div class="card">
     <details id="myDet">
-      <summary>🔍 내 신청 확인 · 취소</summary>
+      <summary id="mySummary"></summary>
       <div class="row">
-        <label>🎓 학번<input id="mno" inputmode="numeric" maxlength="6" autocomplete="off"></label>
-        <label>🙂 이름<input id="mname" maxlength="10" autocomplete="off"></label>
+        <label><span id="lMno"></span><input id="mno" inputmode="numeric" maxlength="6" autocomplete="off"></label>
+        <label><span id="lMname"></span><input id="mname" maxlength="10" autocomplete="off"></label>
       </div>
-      <label>🔑 확인용 비밀번호<input id="mpin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
-      <button class="btn sec" id="mcheck">👀 확인하기</button>
+      <label><span id="lMpin"></span><input id="mpin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+      <button class="btn sec" id="mcheck"></button>
       <div id="mlist"></div>
     </details>
   </div>
@@ -131,33 +137,116 @@ const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())
 let slots = [], month = new Date(), selDate = "", selSlot = null;
 month.setDate(1);
 
+/* ===== 다국어 (이주배경 학생용) =====
+   언어 버튼을 누르면 화면 글이 그 언어로 바뀝니다. 선택한 언어는 이 기기에 기억됩니다.
+   링크 뒤에 &lang=vi 처럼 붙이면 그 언어로 바로 열립니다. (ko en zh vi ru uz th fil mn) */
+const LANGS = [["ko","한국어"],["en","English"],["zh","中文"],["vi","Tiếng Việt"],["ru","Русский"],["uz","O‘zbekcha"],["th","ไทย"],["fil","Filipino"],["mn","Монгол"]];
+const LOC = { ko:"ko-KR", en:"en-US", zh:"zh-CN", vi:"vi-VN", ru:"ru-RU", uz:"uz-UZ", th:"th-TH-u-ca-gregory", fil:"fil-PH", mn:"mn-MN" };
+const I18N = {"ko":{"title":"상담 신청","sub":"👆 날짜를 누르고 가능한 시간을 골라 신청하세요. 선생님이 승인하면 확정돼요. 맨 아래 '내 신청 확인'에서 결과를 볼 수 있어요.","step1":"📅 날짜를 골라요","calHint":"🌸 숫자 = 남은 자리 · 😢 = 마감 · 회색 날짜는 상담이 없는 날","pickTime":"시간을 골라요","step3":"🌱 내 정보를 적어요","lNo":"🍀 학번","lName":"🐸 이름","lTopic":"🌿 상담하고 싶은 내용 (선택)","phTopic":"예: 진로 고민이 있어요","lEmail":"📬 이메일 (선택)","emailHint":"적어 두면 선생님이 승인했을 때 메일로 알려 드려요. 안 적어도 신청은 됩니다.","lPin":"🥝 확인용 비밀번호 (숫자 4자리)","pinHint":"🍃 신청 결과를 확인하거나 취소할 때 필요해요. 친구에게 알려주지 마세요.","send":"🍀 신청하기","mySummary":"🔍 내 신청 확인 · 취소","lMno":"🎓 학번","lMname":"🙂 이름","lMpin":"🔑 확인용 비밀번호","check":"👀 확인하기","loading":"🐣 달력을 불러오는 중…","noApi":"신청 주소가 연결되지 않았어요. 선생님께 받은 링크로 다시 접속해 주세요.","loadFail":"시간표를 불러오지 못했어요: ","errFields":"학번(숫자)과 이름을 입력해 주세요.","errPin":"확인용 비밀번호는 숫자 4자리예요.","sending":"⏳ 신청 중…","okMail":"🍀 신청이 접수됐어요! 선생님이 승인하면 확정됩니다. 확정되면 적어 준 메일로 알려 드릴게요.","okNoMail":"🍀 신청이 접수됐어요! 선생님이 승인하면 확정됩니다. 아래 '내 신청 확인'에서 결과를 볼 수 있어요.","errMy":"학번, 이름, 비밀번호(4자리)를 입력해 주세요.","noReq":"📭 신청 내역이 없어요.","stWait":"⏳ 승인 대기","stOk":"🍀 승인","stNo":"❌ 거절","stCx":"🚫 취소","cancel":"🗑️ 취소","confirmCx":"이 신청을 취소할까요?","slotOpen":"신청 가능","slotFull":"마감","slotName":"상담","prevM":"이전 달","nextM":"다음 달","s0":"이메일 주소를 다시 확인해 주세요. (비워 두어도 됩니다)","s1":"학번(숫자)과 이름을 확인해 주세요.","s2":"확인용 비밀번호는 숫자 4자리입니다.","s3":"학번과 이름이 명단과 맞지 않습니다.","s4":"신청할 수 없는 시간입니다.","s5":"이미 신청된 시간입니다. 다른 시간을 골라 주세요.","s6":"진행 중인 신청은 최대 3건까지입니다.","s7":"확인용 비밀번호가 맞지 않습니다.","s8":"이미 처리된 신청입니다.","s9":"신청을 찾지 못했거나 비밀번호가 맞지 않습니다."},"en":{"title":"Counseling request","sub":"👆 Tap a date, pick a free time and send your request. It is confirmed once your teacher approves it. You can see the result in 'Check my request' at the bottom.","step1":"📅 Pick a date","calHint":"🌸 number = seats left · 😢 = full · grey days have no counseling","pickTime":"pick a time","step3":"🌱 Your details","lNo":"🍀 Student ID","lName":"🐸 Name","lTopic":"🌿 What you want to talk about (optional)","phTopic":"e.g. I need advice about my future career","lEmail":"📬 Email (optional)","emailHint":"If you write it, you will get an email when the teacher approves. You can also leave it empty.","lPin":"🥝 Check password (4 digits)","pinHint":"🍃 You need it to check or cancel your request. Do not tell your friends.","send":"🍀 Send request","mySummary":"🔍 Check / cancel my request","lMno":"🎓 Student ID","lMname":"🙂 Name","lMpin":"🔑 Check password","check":"👀 Check","loading":"🐣 Loading the calendar…","noApi":"The request address is not connected. Please open the link your teacher gave you.","loadFail":"Could not load the timetable: ","errFields":"Please enter your student ID (numbers) and name.","errPin":"The check password must be 4 digits.","sending":"⏳ Sending…","okMail":"🍀 Your request was received! It is confirmed once the teacher approves. We will email you when it is confirmed.","okNoMail":"🍀 Your request was received! It is confirmed once the teacher approves. You can see the result in 'Check my request' below.","errMy":"Please enter your student ID, name and 4-digit password.","noReq":"📭 You have no requests.","stWait":"⏳ Waiting","stOk":"🍀 Approved","stNo":"❌ Declined","stCx":"🚫 Cancelled","cancel":"🗑️ Cancel","confirmCx":"Cancel this request?","slotOpen":"open","slotFull":"full","slotName":"Counseling","prevM":"Previous month","nextM":"Next month","s0":"Please check the email address. (You may leave it empty.)","s1":"Please check your student ID (numbers) and name.","s2":"The check password must be 4 digits.","s3":"Your student ID and name do not match the class list.","s4":"This time cannot be booked.","s5":"This time is already taken. Please pick another time.","s6":"You can have up to 3 open requests.","s7":"The check password is wrong.","s8":"This request has already been handled.","s9":"Request not found, or the password is wrong."},"zh":{"title":"咨询申请","sub":"👆 点击日期，选择可预约的时间后提交申请。老师同意后即为确定。可在最下方『查看我的申请』中查看结果。","step1":"📅 选择日期","calHint":"🌸 数字 = 剩余名额 · 😢 = 已满 · 灰色日期当天没有咨询","pickTime":"选择时间","step3":"🌱 填写我的信息","lNo":"🍀 学号","lName":"🐸 姓名","lTopic":"🌿 想谈的内容（选填）","phTopic":"例：我有升学就业方面的烦恼","lEmail":"📬 邮箱（选填）","emailHint":"填写后，老师同意时会发邮件通知你。不填也可以申请。","lPin":"🥝 确认用密码（4位数字）","pinHint":"🍃 查看或取消申请时需要。请不要告诉同学。","send":"🍀 提交申请","mySummary":"🔍 查看 · 取消我的申请","lMno":"🎓 学号","lMname":"🙂 姓名","lMpin":"🔑 确认用密码","check":"👀 查看","loading":"🐣 正在加载日历…","noApi":"未连接申请地址。请使用老师给的链接重新打开。","loadFail":"无法加载时间表：","errFields":"请输入学号（数字）和姓名。","errPin":"确认用密码为4位数字。","sending":"⏳ 正在提交…","okMail":"🍀 申请已提交！老师同意后即为确定。确定后会发邮件通知你。","okNoMail":"🍀 申请已提交！老师同意后即为确定。可在下方『查看我的申请』中查看结果。","errMy":"请输入学号、姓名和4位密码。","noReq":"📭 没有申请记录。","stWait":"⏳ 等待同意","stOk":"🍀 已同意","stNo":"❌ 已拒绝","stCx":"🚫 已取消","cancel":"🗑️ 取消","confirmCx":"要取消这个申请吗？","slotOpen":"可申请","slotFull":"已满","slotName":"咨询","prevM":"上个月","nextM":"下个月","s0":"请再次确认邮箱地址。（也可以留空）","s1":"请确认学号（数字）和姓名。","s2":"确认用密码为4位数字。","s3":"学号和姓名与名单不符。","s4":"该时间无法申请。","s5":"该时间已被预约，请选择其他时间。","s6":"进行中的申请最多3个。","s7":"确认用密码不正确。","s8":"该申请已处理。","s9":"未找到申请，或密码不正确。"},"vi":{"title":"Đăng ký tư vấn","sub":"👆 Hãy chọn ngày, chọn giờ còn trống rồi gửi đăng ký. Thầy/cô duyệt thì mới được xác nhận. Xem kết quả ở mục 'Kiểm tra đăng ký của tôi' ở cuối trang.","step1":"📅 Chọn ngày","calHint":"🌸 số = chỗ còn lại · 😢 = hết chỗ · ngày màu xám là ngày không có tư vấn","pickTime":"chọn giờ","step3":"🌱 Thông tin của tôi","lNo":"🍀 Mã học sinh","lName":"🐸 Họ tên","lTopic":"🌿 Điều muốn trao đổi (không bắt buộc)","phTopic":"VD: Em đang băn khoăn về hướng nghiệp","lEmail":"📬 Email (không bắt buộc)","emailHint":"Nếu điền, bạn sẽ nhận email khi thầy/cô duyệt. Không điền vẫn đăng ký được.","lPin":"🥝 Mật khẩu xác nhận (4 chữ số)","pinHint":"🍃 Cần khi xem hoặc hủy đăng ký. Đừng cho bạn bè biết.","send":"🍀 Gửi đăng ký","mySummary":"🔍 Kiểm tra · hủy đăng ký của tôi","lMno":"🎓 Mã học sinh","lMname":"🙂 Họ tên","lMpin":"🔑 Mật khẩu xác nhận","check":"👀 Kiểm tra","loading":"🐣 Đang tải lịch…","noApi":"Chưa kết nối địa chỉ đăng ký. Hãy mở lại bằng đường link thầy/cô đã gửi.","loadFail":"Không tải được lịch: ","errFields":"Vui lòng nhập mã học sinh (số) và họ tên.","errPin":"Mật khẩu xác nhận gồm 4 chữ số.","sending":"⏳ Đang gửi…","okMail":"🍀 Đã nhận đăng ký! Thầy/cô duyệt thì sẽ được xác nhận. Khi xác nhận, email sẽ được gửi cho bạn.","okNoMail":"🍀 Đã nhận đăng ký! Thầy/cô duyệt thì sẽ được xác nhận. Xem kết quả ở 'Kiểm tra đăng ký của tôi' bên dưới.","errMy":"Vui lòng nhập mã học sinh, họ tên và mật khẩu 4 chữ số.","noReq":"📭 Chưa có đăng ký nào.","stWait":"⏳ Chờ duyệt","stOk":"🍀 Đã duyệt","stNo":"❌ Bị từ chối","stCx":"🚫 Đã hủy","cancel":"🗑️ Hủy","confirmCx":"Hủy đăng ký này?","slotOpen":"còn chỗ","slotFull":"hết chỗ","slotName":"Tư vấn","prevM":"Tháng trước","nextM":"Tháng sau","s0":"Vui lòng kiểm tra lại địa chỉ email. (Có thể để trống)","s1":"Vui lòng kiểm tra mã học sinh (số) và họ tên.","s2":"Mật khẩu xác nhận gồm 4 chữ số.","s3":"Mã học sinh và họ tên không khớp với danh sách lớp.","s4":"Không thể đăng ký giờ này.","s5":"Giờ này đã có người đăng ký. Vui lòng chọn giờ khác.","s6":"Chỉ được có tối đa 3 đăng ký đang chờ.","s7":"Mật khẩu xác nhận không đúng.","s8":"Đăng ký này đã được xử lý.","s9":"Không tìm thấy đăng ký hoặc mật khẩu không đúng."},"ru":{"title":"Запись на консультацию","sub":"👆 Выберите день, затем свободное время и отправьте заявку. Она подтверждается после одобрения учителем. Результат можно посмотреть внизу в разделе «Моя заявка».","step1":"📅 Выберите день","calHint":"🌸 число = свободные места · 😢 = мест нет · серые дни — консультаций нет","pickTime":"выберите время","step3":"🌱 Мои данные","lNo":"🍀 Номер ученика","lName":"🐸 Имя","lTopic":"🌿 О чём хотите поговорить (необязательно)","phTopic":"Например: не знаю, кем стать после школы","lEmail":"📬 Эл. почта (необязательно)","emailHint":"Если укажете, вам придёт письмо, когда учитель одобрит заявку. Можно не указывать.","lPin":"🥝 Пароль для проверки (4 цифры)","pinHint":"🍃 Нужен, чтобы посмотреть или отменить заявку. Не говорите его друзьям.","send":"🍀 Отправить заявку","mySummary":"🔍 Моя заявка · отмена","lMno":"🎓 Номер ученика","lMname":"🙂 Имя","lMpin":"🔑 Пароль для проверки","check":"👀 Проверить","loading":"🐣 Загружаем календарь…","noApi":"Адрес заявки не подключён. Откройте ссылку, которую дал учитель.","loadFail":"Не удалось загрузить расписание: ","errFields":"Введите номер ученика (цифры) и имя.","errPin":"Пароль для проверки — 4 цифры.","sending":"⏳ Отправляем…","okMail":"🍀 Заявка принята! Она подтверждается после одобрения учителем. Мы пришлём письмо, когда её подтвердят.","okNoMail":"🍀 Заявка принята! Она подтверждается после одобрения учителем. Результат смотрите ниже в разделе «Моя заявка».","errMy":"Введите номер ученика, имя и пароль из 4 цифр.","noReq":"📭 Заявок нет.","stWait":"⏳ Ожидает","stOk":"🍀 Одобрено","stNo":"❌ Отклонено","stCx":"🚫 Отменено","cancel":"🗑️ Отменить","confirmCx":"Отменить эту заявку?","slotOpen":"свободно","slotFull":"занято","slotName":"Консультация","prevM":"Предыдущий месяц","nextM":"Следующий месяц","s0":"Проверьте адрес эл. почты. (Можно оставить пустым)","s1":"Проверьте номер ученика (цифры) и имя.","s2":"Пароль для проверки — 4 цифры.","s3":"Номер ученика и имя не совпадают со списком класса.","s4":"На это время записаться нельзя.","s5":"Это время уже занято. Выберите другое время.","s6":"Одновременно можно иметь не более 3 заявок.","s7":"Неверный пароль для проверки.","s8":"Эта заявка уже обработана.","s9":"Заявка не найдена или пароль неверный."},"uz":{"title":"Suhbatga yozilish","sub":"👆 Kunni tanlang, bo‘sh vaqtni tanlab ariza yuboring. O‘qituvchi tasdiqlagach qat’iylashadi. Natijani eng pastdagi ‘Mening arizam’ bo‘limida ko‘rishingiz mumkin.","step1":"📅 Kunni tanlang","calHint":"🌸 raqam = qolgan joy · 😢 = joy yo‘q · kulrang kunlarda suhbat yo‘q","pickTime":"vaqtni tanlang","step3":"🌱 Mening ma’lumotlarim","lNo":"🍀 O‘quvchi raqami","lName":"🐸 Ism","lTopic":"🌿 Nima haqida gaplashmoqchisiz (ixtiyoriy)","phTopic":"Masalan: kasb tanlash haqida o‘ylayapman","lEmail":"📬 Email (ixtiyoriy)","emailHint":"Yozsangiz, o‘qituvchi tasdiqlaganda emailga xabar keladi. Yozmasangiz ham ariza qabul qilinadi.","lPin":"🥝 Tekshiruv paroli (4 ta raqam)","pinHint":"🍃 Arizani ko‘rish yoki bekor qilish uchun kerak. Do‘stlaringizga aytmang.","send":"🍀 Ariza yuborish","mySummary":"🔍 Mening arizam · bekor qilish","lMno":"🎓 O‘quvchi raqami","lMname":"🙂 Ism","lMpin":"🔑 Tekshiruv paroli","check":"👀 Tekshirish","loading":"🐣 Taqvim yuklanmoqda…","noApi":"Ariza manzili ulanmagan. O‘qituvchi bergan havola orqali qayta kiring.","loadFail":"Jadvalni yuklab bo‘lmadi: ","errFields":"O‘quvchi raqami (raqamlar) va ismni kiriting.","errPin":"Tekshiruv paroli 4 ta raqamdan iborat.","sending":"⏳ Yuborilmoqda…","okMail":"🍀 Ariza qabul qilindi! O‘qituvchi tasdiqlagach qat’iylashadi. Tasdiqlanganda emailga xabar yuboriladi.","okNoMail":"🍀 Ariza qabul qilindi! O‘qituvchi tasdiqlagach qat’iylashadi. Natijani quyidagi ‘Mening arizam’ bo‘limida ko‘ring.","errMy":"O‘quvchi raqami, ism va 4 xonali parolni kiriting.","noReq":"📭 Ariza yo‘q.","stWait":"⏳ Kutilmoqda","stOk":"🍀 Tasdiqlandi","stNo":"❌ Rad etildi","stCx":"🚫 Bekor qilindi","cancel":"🗑️ Bekor qilish","confirmCx":"Bu arizani bekor qilasizmi?","slotOpen":"bo‘sh","slotFull":"band","slotName":"Suhbat","prevM":"Oldingi oy","nextM":"Keyingi oy","s0":"Email manzilini tekshiring. (Bo‘sh qoldirsa ham bo‘ladi)","s1":"O‘quvchi raqami (raqamlar) va ismni tekshiring.","s2":"Tekshiruv paroli 4 ta raqamdan iborat.","s3":"O‘quvchi raqami va ism ro‘yxatga mos kelmaydi.","s4":"Bu vaqtga yozilib bo‘lmaydi.","s5":"Bu vaqt band. Boshqa vaqtni tanlang.","s6":"Bir vaqtda ko‘pi bilan 3 ta ariza bo‘lishi mumkin.","s7":"Tekshiruv paroli noto‘g‘ri.","s8":"Bu ariza allaqachon ko‘rib chiqilgan.","s9":"Ariza topilmadi yoki parol noto‘g‘ri."},"th":{"title":"ขอนัดพบครู","sub":"👆 เลือกวัน เลือกเวลาที่ว่าง แล้วส่งคำขอ จะยืนยันเมื่อครูอนุมัติ ดูผลได้ที่ ‘ตรวจสอบคำขอของฉัน’ ด้านล่าง","step1":"📅 เลือกวัน","calHint":"🌸 ตัวเลข = ที่ว่างที่เหลือ · 😢 = เต็ม · วันสีเทาคือวันที่ไม่มีการนัดพบ","pickTime":"เลือกเวลา","step3":"🌱 ข้อมูลของฉัน","lNo":"🍀 รหัสนักเรียน","lName":"🐸 ชื่อ","lTopic":"🌿 เรื่องที่อยากปรึกษา (ไม่บังคับ)","phTopic":"เช่น กังวลเรื่องการเรียนต่อ","lEmail":"📬 อีเมล (ไม่บังคับ)","emailHint":"ถ้ากรอกไว้ เมื่อครูอนุมัติจะมีอีเมลแจ้ง ไม่กรอกก็ส่งคำขอได้","lPin":"🥝 รหัสผ่านสำหรับตรวจสอบ (ตัวเลข 4 หลัก)","pinHint":"🍃 ใช้ตอนตรวจสอบหรือยกเลิกคำขอ อย่าบอกเพื่อน","send":"🍀 ส่งคำขอ","mySummary":"🔍 ตรวจสอบ · ยกเลิกคำขอของฉัน","lMno":"🎓 รหัสนักเรียน","lMname":"🙂 ชื่อ","lMpin":"🔑 รหัสผ่านสำหรับตรวจสอบ","check":"👀 ตรวจสอบ","loading":"🐣 กำลังโหลดปฏิทิน…","noApi":"ยังไม่ได้เชื่อมต่อที่อยู่คำขอ กรุณาเปิดลิงก์ที่ครูให้มาอีกครั้ง","loadFail":"โหลดตารางเวลาไม่สำเร็จ: ","errFields":"กรุณากรอกรหัสนักเรียน (ตัวเลข) และชื่อ","errPin":"รหัสผ่านสำหรับตรวจสอบเป็นตัวเลข 4 หลัก","sending":"⏳ กำลังส่ง…","okMail":"🍀 รับคำขอแล้ว! จะยืนยันเมื่อครูอนุมัติ เมื่อยืนยันแล้วจะส่งอีเมลแจ้ง","okNoMail":"🍀 รับคำขอแล้ว! จะยืนยันเมื่อครูอนุมัติ ดูผลได้ที่ ‘ตรวจสอบคำขอของฉัน’ ด้านล่าง","errMy":"กรุณากรอกรหัสนักเรียน ชื่อ และรหัสผ่าน 4 หลัก","noReq":"📭 ไม่มีรายการคำขอ","stWait":"⏳ รออนุมัติ","stOk":"🍀 อนุมัติแล้ว","stNo":"❌ ปฏิเสธ","stCx":"🚫 ยกเลิกแล้ว","cancel":"🗑️ ยกเลิก","confirmCx":"ต้องการยกเลิกคำขอนี้หรือไม่?","slotOpen":"ว่าง","slotFull":"เต็ม","slotName":"ปรึกษา","prevM":"เดือนก่อนหน้า","nextM":"เดือนถัดไป","s0":"กรุณาตรวจสอบอีเมลอีกครั้ง (เว้นว่างได้)","s1":"กรุณาตรวจสอบรหัสนักเรียน (ตัวเลข) และชื่อ","s2":"รหัสผ่านสำหรับตรวจสอบเป็นตัวเลข 4 หลัก","s3":"รหัสนักเรียนและชื่อไม่ตรงกับรายชื่อ","s4":"ไม่สามารถขอเวลานี้ได้","s5":"เวลานี้มีผู้ขอแล้ว กรุณาเลือกเวลาอื่น","s6":"มีคำขอที่รออยู่ได้ไม่เกิน 3 รายการ","s7":"รหัสผ่านสำหรับตรวจสอบไม่ถูกต้อง","s8":"คำขอนี้ได้รับการดำเนินการแล้ว","s9":"ไม่พบคำขอ หรือรหัสผ่านไม่ถูกต้อง"},"fil":{"title":"Request ng konsultasyon","sub":"👆 Pumili ng petsa, piliin ang bakanteng oras, at magpadala ng request. Kumpirmado ito kapag inaprubahan ng guro. Makikita ang resulta sa ‘Tingnan ang aking request’ sa ibaba.","step1":"📅 Pumili ng petsa","calHint":"🌸 numero = natitirang puwesto · 😢 = puno · kulay-abong petsa = walang konsultasyon","pickTime":"pumili ng oras","step3":"🌱 Ang aking impormasyon","lNo":"🍀 Student ID","lName":"🐸 Pangalan","lTopic":"🌿 Gusto kong pag-usapan (opsyonal)","phTopic":"Hal.: May problema ako sa pagpili ng kurso","lEmail":"📬 Email (opsyonal)","emailHint":"Kung isusulat mo, may email na darating kapag inaprubahan ng guro. Puwede ring iwanang blanko.","lPin":"🥝 Password para sa pagtingin (4 na numero)","pinHint":"🍃 Kailangan ito kapag titingnan o kakanselahin ang request. Huwag sabihin sa kaibigan.","send":"🍀 Ipadala ang request","mySummary":"🔍 Tingnan · kanselahin ang aking request","lMno":"🎓 Student ID","lMname":"🙂 Pangalan","lMpin":"🔑 Password","check":"👀 Tingnan","loading":"🐣 Niloload ang kalendaryo…","noApi":"Hindi nakakonekta ang address ng request. Buksan muli ang link na ibinigay ng guro.","loadFail":"Hindi ma-load ang iskedyul: ","errFields":"Pakilagay ang student ID (numero) at pangalan.","errPin":"Ang password ay 4 na numero.","sending":"⏳ Ipinapadala…","okMail":"🍀 Natanggap ang request! Kumpirmado ito kapag inaprubahan ng guro. Mag-eemail kami kapag kumpirmado na.","okNoMail":"🍀 Natanggap ang request! Kumpirmado ito kapag inaprubahan ng guro. Tingnan ang resulta sa ‘Tingnan ang aking request’ sa ibaba.","errMy":"Pakilagay ang student ID, pangalan at 4-digit na password.","noReq":"📭 Walang request.","stWait":"⏳ Naghihintay","stOk":"🍀 Aprubado","stNo":"❌ Tinanggihan","stCx":"🚫 Kinansela","cancel":"🗑️ Kanselahin","confirmCx":"Kakanselahin ang request na ito?","slotOpen":"bakante","slotFull":"puno","slotName":"Konsultasyon","prevM":"Nakaraang buwan","nextM":"Susunod na buwan","s0":"Pakisuri ang email address. (Puwedeng iwanang blanko)","s1":"Pakisuri ang student ID (numero) at pangalan.","s2":"Ang password ay 4 na numero.","s3":"Hindi tugma ang student ID at pangalan sa listahan.","s4":"Hindi puwedeng i-book ang oras na ito.","s5":"Kuha na ang oras na ito. Pumili ng ibang oras.","s6":"Hanggang 3 lang ang puwedeng nakabinbing request.","s7":"Mali ang password.","s8":"Naproseso na ang request na ito.","s9":"Hindi nakita ang request, o mali ang password."},"mn":{"title":"Зөвлөгөө авах хүсэлт","sub":"👆 Өдрөө сонгоод, сул цагийг сонгон хүсэлт илгээнэ үү. Багш зөвшөөрсний дараа баталгаажна. Үр дүнг доод талын ‘Миний хүсэлт’ хэсгээс харж болно.","step1":"📅 Өдөр сонгох","calHint":"🌸 тоо = үлдсэн зай · 😢 = дүүрсэн · саарал өдөр бол зөвлөгөө байхгүй өдөр","pickTime":"цагаа сонгоно уу","step3":"🌱 Миний мэдээлэл","lNo":"🍀 Сурагчийн дугаар","lName":"🐸 Нэр","lTopic":"🌿 Ярилцахыг хүсэж буй зүйл (заавал биш)","phTopic":"Жишээ: Мэргэжил сонгох талаар санаа зовж байна","lEmail":"📬 И-мэйл (заавал биш)","emailHint":"Бичвэл багш зөвшөөрөхөд и-мэйлээр мэдэгдэнэ. Бичихгүй байсан ч хүсэлт илгээгдэнэ.","lPin":"🥝 Шалгах нууц үг (4 орон тоо)","pinHint":"🍃 Хүсэлтээ шалгах, цуцлахад хэрэгтэй. Найздаа бүү хэл.","send":"🍀 Хүсэлт илгээх","mySummary":"🔍 Миний хүсэлт · цуцлах","lMno":"🎓 Сурагчийн дугаар","lMname":"🙂 Нэр","lMpin":"🔑 Шалгах нууц үг","check":"👀 Шалгах","loading":"🐣 Хуанли ачаалж байна…","noApi":"Хүсэлтийн хаяг холбогдоогүй байна. Багшийн өгсөн холбоосоор дахин нэвтэрнэ үү.","loadFail":"Цагийн хуваарийг ачаалж чадсангүй: ","errFields":"Сурагчийн дугаар (тоо) болон нэрээ оруулна уу.","errPin":"Шалгах нууц үг 4 орон тоо байна.","sending":"⏳ Илгээж байна…","okMail":"🍀 Хүсэлт хүлээн авлаа! Багш зөвшөөрсний дараа баталгаажна. Баталгаажихад и-мэйлээр мэдэгдэнэ.","okNoMail":"🍀 Хүсэлт хүлээн авлаа! Багш зөвшөөрсний дараа баталгаажна. Үр дүнг доорх ‘Миний хүсэлт’ хэсгээс харна уу.","errMy":"Сурагчийн дугаар, нэр, 4 оронтой нууц үгээ оруулна уу.","noReq":"📭 Хүсэлт алга байна.","stWait":"⏳ Хүлээгдэж байна","stOk":"🍀 Зөвшөөрсөн","stNo":"❌ Татгалзсан","stCx":"🚫 Цуцалсан","cancel":"🗑️ Цуцлах","confirmCx":"Энэ хүсэлтийг цуцлах уу?","slotOpen":"сул","slotFull":"дүүрсэн","slotName":"Зөвлөгөө","prevM":"Өмнөх сар","nextM":"Дараа сар","s0":"И-мэйл хаягаа шалгана уу. (Хоосон орхиж болно)","s1":"Сурагчийн дугаар (тоо) болон нэрээ шалгана уу.","s2":"Шалгах нууц үг 4 орон тоо байна.","s3":"Сурагчийн дугаар, нэр жагсаалттай тохирохгүй байна.","s4":"Энэ цагт бүртгүүлэх боломжгүй.","s5":"Энэ цаг аль хэдийн захиалагдсан. Өөр цаг сонгоно уу.","s6":"Хүлээгдэж буй хүсэлт дээд тал нь 3 байна.","s7":"Шалгах нууц үг буруу байна.","s8":"Энэ хүсэлтийг аль хэдийн шийдвэрлэсэн.","s9":"Хүсэлт олдсонгүй эсвэл нууц үг буруу байна."}};
+const SERR = {"이메일 주소를 다시 확인해 주세요. (비워 두어도 됩니다)":"s0","학번(숫자)과 이름을 확인해 주세요.":"s1","확인용 비밀번호는 숫자 4자리입니다.":"s2","학번과 이름이 명단과 맞지 않습니다.":"s3","신청할 수 없는 시간입니다.":"s4","이미 신청된 시간입니다. 다른 시간을 골라 주세요.":"s5","진행 중인 신청은 최대 3건까지입니다.":"s6","확인용 비밀번호가 맞지 않습니다.":"s7","이미 처리된 신청입니다.":"s8","신청을 찾지 못했거나 비밀번호가 맞지 않습니다.":"s9"};
+function pickLang() {
+  const q = (new URLSearchParams(location.search).get("lang") || "").toLowerCase();
+  if (I18N[q]) return q;
+  try { const v = localStorage.getItem("rsv-lang"); if (I18N[v]) return v; } catch (e) {}
+  const navs = (navigator.languages || [navigator.language || "ko"]).map(x => String(x).toLowerCase());
+  for (const n of navs) {
+    if (n.startsWith("ko")) return "ko";
+    if (n.startsWith("zh")) return "zh";
+    if (n.startsWith("vi")) return "vi";
+    if (n.startsWith("ru")) return "ru";
+    if (n.startsWith("uz")) return "uz";
+    if (n.startsWith("th")) return "th";
+    if (n.startsWith("tl") || n.startsWith("fil")) return "fil";
+    if (n.startsWith("mn")) return "mn";
+    if (n.startsWith("en")) return "en";
+  }
+  return "ko";
+}
+let lang = pickLang(), srvTitle = "";
+const T = k => (I18N[lang] && I18N[lang][k]) || I18N.ko[k] || "";
+const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/* 한국어가 아닐 때는 뒤에 한국어 낱말을 작게 같이 보여 줍니다. 예) 🍀 Student ID (학번) */
+const KSHORT = { lNo: "학번", lName: "이름", lTopic: "상담 내용", lEmail: "이메일", lPin: "비밀번호", lMno: "학번", lMname: "이름", lMpin: "비밀번호" };
+const TK = k => lang === "ko" || !KSHORT[k] ? esc(T(k)) : esc(T(k)) + ' <span class="ko-sub">(' + esc(KSHORT[k]) + ")</span>";
+const noColon = t => String(t).replace(/[:：]\s*$/, "");
+const trErr = t => { const k = SERR[String(t || "").trim()]; return k ? T(k) : t; };
+const fmt = (d, o) => { try { return new Intl.DateTimeFormat(LOC[lang] || "ko-KR", o).format(d); } catch (e) { return new Intl.DateTimeFormat("ko-KR", o).format(d); } };
+/* 브라우저가 달 이름을 지원하지 않는 언어는 직접 적어 둡니다. */
+const CAL = {
+  uz: { dow: ["Yak", "Dush", "Sesh", "Chor", "Pay", "Jum", "Shan"],
+        mon: ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"],
+        ym: d => d.getFullYear() + "-yil " + CAL.uz.mon[d.getMonth()],
+        md: d => d.getDate() + "-" + CAL.uz.mon[d.getMonth()] + " (" + CAL.uz.dow[d.getDay()] + ")" },
+  mn: { dow: ["Ня", "Да", "Мя", "Лх", "Пү", "Ба", "Бя"],
+        ym: d => d.getFullYear() + " оны " + (d.getMonth() + 1) + "-р сар",
+        md: d => (d.getMonth() + 1) + "-р сарын " + d.getDate() + " (" + CAL.mn.dow[d.getDay()] + ")" }
+};
+function dowNames() {
+  if (lang === "ko") return [..."일월화수목금토"];
+  if (CAL[lang]) return CAL[lang].dow;
+  const out = []; for (let i = 0; i < 7; i++) out.push(fmt(new Date(2024, 8, 1 + i), { weekday: "short" }));
+  return out;
+}
+const ymLabel = d => CAL[lang] ? CAL[lang].ym(d) : fmt(d, { year: "numeric", month: "long" });
+const mdLabel = d => CAL[lang] ? CAL[lang].md(d) : fmt(d, { month: "long", day: "numeric", weekday: "short" });
+function drawLangBar() {
+  const bar = $("langbar"); if (!bar) return;
+  bar.innerHTML = "<span>🌐</span>";
+  LANGS.forEach(([c, nm]) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = nm;
+    b.className = c === lang ? "on" : ""; b.lang = c;
+    b.onclick = () => { lang = c; try { localStorage.setItem("rsv-lang", c); } catch (e) {} applyLang(); };
+    bar.appendChild(b);
+  });
+}
+function applyLang() {
+  document.documentElement.lang = lang;
+  $("title").textContent = "🐥 " + (srvTitle || T("title"));
+  document.title = srvTitle || T("title");
+  $("sub").textContent = T("sub");
+  $("step1").textContent = T("step1");
+  $("calHint").textContent = T("calHint");
+  $("step3").textContent = T("step3");
+  ["lNo", "lName", "lTopic", "lEmail", "lPin", "lMno", "lMname", "lMpin"].forEach(k => { $(k).innerHTML = TK(k); });
+  $("emailHint").textContent = T("emailHint");
+  $("pinHint").textContent = T("pinHint");
+  $("send").textContent = T("send");
+  $("mySummary").textContent = T("mySummary");
+  $("mcheck").textContent = T("check");
+  $("topic").placeholder = T("phTopic");
+  $("prev").setAttribute("aria-label", T("prevM"));
+  $("next").setAttribute("aria-label", T("nextM"));
+  drawLangBar(); drawCal(); drawSlots();
+}
+
+
 const msg = (box, text, ok) => { box.innerHTML = ""; if (!text) return; const d = document.createElement("div"); d.className = "msg " + (ok ? "ok" : "err"); d.textContent = text; box.appendChild(d); };
 
 async function get() { const r = await fetch(`${API}${API.includes("?") ? "&" : "?"}t=${Date.now()}`); return r.json(); }
 async function post(o) { const r = await fetch(API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(o) }); return r.json(); }
 
 async function load() {
-  if (!API) { msg($("top"), "신청 주소가 연결되지 않았어요. 선생님께 받은 링크로 다시 접속해 주세요.", false); return; }
-  $("cal").innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#6e6080;font-size:17px;padding:28px 0">🐣 달력을 불러오는 중…</p>';
+  if (!API) { msg($("top"), T("noApi"), false); return; }
+  $("cal").innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#6e6080;font-size:17px;padding:28px 0">' + T("loading") + '</p>';
   try {
     const j = await get();
     if (!j.ok) throw new Error(j.error || "불러오기 실패");
     slots = j.slots || [];
-    if (j.title) { $("title").textContent = "🐥 " + j.title; document.title = j.title; }
+    if (j.title) { srvTitle = j.title; $("title").textContent = "🐥 " + j.title; document.title = j.title; }
     if (j.rosterOn) $("top").dataset.roster = "1";
     // 가장 가까운 상담 가능 날짜의 달을 먼저 보여주기
     const first = slots.filter(s => !s.taken).map(s => s.date).sort()[0];
     if (first) { month = new Date(first + "T00:00:00"); month.setDate(1); }
     if (first && !selDate) selDate = first;
     drawCal(); drawSlots();
-  } catch (e) { msg($("top"), "시간표를 불러오지 못했어요: " + e.message, false); }
+  } catch (e) { msg($("top"), T("loadFail") + trErr(e.message), false); }
 }
 
 function drawCal() {
   const y = month.getFullYear(), m = month.getMonth();
-  $("monthLabel").textContent = `🌼 ${y}년 ${m + 1}월`;
+  $("monthLabel").textContent = "🌼 " + ymLabel(new Date(y, m, 1));
   const cal = $("cal"); cal.innerHTML = "";
-  [...DOW].forEach(d => { const e = document.createElement("div"); e.className = "dow"; e.textContent = d; cal.appendChild(e); });
+  dowNames().forEach(d => { const e = document.createElement("div"); e.className = "dow"; e.textContent = d; cal.appendChild(e); });
   const lead = new Date(y, m, 1).getDay(), dim = new Date(y, m + 1, 0).getDate(), today = ymd(new Date());
   for (let i = 0; i < lead; i++) cal.appendChild(document.createElement("div"));
   for (let d = 1; d <= dim; d++) {
@@ -174,12 +263,12 @@ function drawSlots() {
   $("slotCard").hidden = !selDate;
   if (!selDate) return;
   const d = new Date(selDate + "T00:00:00");
-  $("slotTitle").textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) 시간을 골라요 🍀`;
+  $("slotTitle").textContent = mdLabel(d) + " " + T("pickTime") + " 🍀";
   const box = $("slots"); box.innerHTML = "";
   slots.filter(s => s.date === selDate).sort((a, b) => a.start.localeCompare(b.start)).forEach(s => {
     const b = document.createElement("button");
     b.className = "slot" + (s.taken ? " full" : "") + (selSlot && selSlot.id === s.id ? " sel" : "");
-    b.innerHTML = `<b>${s.taken ? "🔒" : "🌿"} ${s.start} ~ ${s.end}</b><span>${s.name || "상담"}${s.taken ? " · 마감" : " · 신청 가능"}</span>`;
+    b.innerHTML = `<b>${s.taken ? "🔒" : "🌿"} ${s.start} ~ ${s.end}</b><span>${esc(s.name || T("slotName"))} · ${s.taken ? T("slotFull") : T("slotOpen")}</span>`;
     if (!s.taken) b.onclick = () => { selSlot = s; drawSlots(); };
     box.appendChild(b);
   });
@@ -193,46 +282,47 @@ $("next").onclick = () => { month.setMonth(month.getMonth() + 1); drawCal(); };
 $("send").onclick = async () => {
   if (!selSlot) return;
   const no = $("no").value.trim(), name = $("name").value.trim(), pin = $("pin").value.trim();
-  if (!/^\d{1,6}$/.test(no) || !name) return msg($("sendMsg"), "학번(숫자)과 이름을 입력해 주세요.", false);
-  if (!/^\d{4}$/.test(pin)) return msg($("sendMsg"), "확인용 비밀번호는 숫자 4자리예요.", false);
-  $("send").disabled = true; msg($("sendMsg"), "⏳ 신청 중…", true);
+  if (!/^\d{1,6}$/.test(no) || !name) return msg($("sendMsg"), T("errFields"), false);
+  if (!/^\d{4}$/.test(pin)) return msg($("sendMsg"), T("errPin"), false);
+  $("send").disabled = true; msg($("sendMsg"), T("sending"), true);
   try {
     const j = await post({ action: "reserve", slotId: selSlot.id, no, name, topic: $("topic").value.trim(), pin, email: $("email").value.trim() });
-    if (!j.ok) throw new Error(j.error || "신청 실패");
+    if (!j.ok) throw new Error(j.error || noColon(T("loadFail")));
     $("topic").value = ""; $("pin").value = "";
     $("mno").value = no; $("mname").value = name;
     selSlot = null; await load(); drawSlots(); $("formBox").hidden = true;
-    msg($("sendMsg"), "🍀 신청이 접수됐어요! 선생님이 승인하면 확정됩니다." + ($("email").value.trim() ? " 확정되면 적어 준 메일로 알려 드릴게요." : " 아래 '내 신청 확인'에서 결과를 볼 수 있어요."), true);
+    msg($("sendMsg"), $("email").value.trim() ? T("okMail") : T("okNoMail"), true);
     $("slotCard").hidden = false; $("sendMsg").scrollIntoView({ behavior: "smooth", block: "center" });
-  } catch (e) { msg($("sendMsg"), e.message, false); await load(); drawSlots(); $("formBox").hidden = !selSlot; }
+  } catch (e) { await load(); drawSlots(); $("formBox").hidden = !selSlot; msg($("sendMsg"), trErr(e.message), false); }
   $("send").disabled = false;
 };
 
 async function myList() {
   const no = $("mno").value.trim(), name = $("mname").value.trim(), pin = $("mpin").value.trim(), box = $("mlist");
   box.innerHTML = "";
-  if (!/^\d{1,6}$/.test(no) || !name || !/^\d{4}$/.test(pin)) return msg(box, "학번, 이름, 비밀번호(4자리)를 입력해 주세요.", false);
+  if (!/^\d{1,6}$/.test(no) || !name || !/^\d{4}$/.test(pin)) return msg(box, T("errMy"), false);
   try {
     const j = await post({ action: "status", no, name, pin });
     if (!j.ok) throw new Error(j.error);
-    if (!j.reqs.length) return msg(box, "📭 신청 내역이 없어요.", true);
+    if (!j.reqs.length) return msg(box, T("noReq"), true);
     j.reqs.forEach(r => {
       const d = document.createElement("div"); d.className = "req";
       const l = document.createElement("div"); l.innerHTML = `<b>${r.date} ${r.start}~${r.end}</b> <span class="hint">${r.slot || ""}</span>${r.topic ? `<div class="hint"></div>` : ""}`;
       if (r.topic) l.lastChild.textContent = r.topic;
       const rt = document.createElement("div"); rt.style.cssText = "display:flex;gap:8px;align-items:center";
-      const t = document.createElement("span"); t.className = "tag " + r.status; t.textContent = r.status === "대기" ? "⏳ 승인 대기" : r.status === "승인" ? "🍀 승인" : r.status === "거절" ? "❌ 거절" : r.status === "취소" ? "🚫 취소" : r.status; rt.appendChild(t);
+      const t = document.createElement("span"); t.className = "tag " + r.status; t.textContent = r.status === "대기" ? T("stWait") : r.status === "승인" ? T("stOk") : r.status === "거절" ? T("stNo") : r.status === "취소" ? T("stCx") : r.status; rt.appendChild(t);
       if (r.note && r.status !== "대기") { const n = document.createElement("span"); n.className = "hint"; n.textContent = r.note; rt.appendChild(n); }
       if (r.status === "대기" || r.status === "승인") {
-        const c = document.createElement("button"); c.className = "small"; c.textContent = "🗑️ 취소";
-        c.onclick = async () => { if (!confirm("이 신청을 취소할까요?")) return; try { const x = await post({ action: "cancel", id: r.id, no, pin }); if (!x.ok) throw new Error(x.error); await load(); drawSlots(); myList(); } catch (e) { msg(box, e.message, false); } };
+        const c = document.createElement("button"); c.className = "small"; c.textContent = T("cancel");
+        c.onclick = async () => { if (!confirm(T("confirmCx"))) return; try { const x = await post({ action: "cancel", id: r.id, no, pin }); if (!x.ok) throw new Error(x.error); await load(); drawSlots(); myList(); } catch (e) { msg(box, trErr(e.message), false); } };
         rt.appendChild(c);
       }
       d.append(l, rt); box.appendChild(d);
     });
-  } catch (e) { msg(box, e.message || "확인하지 못했어요.", false); }
+  } catch (e) { msg(box, trErr(e.message) || noColon(T("loadFail")), false); }
 }
 $("mcheck").onclick = myList;
+applyLang();
 load();
 </script>
 </body>
