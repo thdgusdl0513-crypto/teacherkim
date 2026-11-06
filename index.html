@@ -72,6 +72,7 @@
   .langbar button { border:2px solid var(--lav-mid); background:#fff; color:var(--ink); border-radius:999px; padding:5px 13px; font-size:14.5px; font-weight:700; line-height:1.3; }
   .langbar button.on { background:var(--lav-deep); border-color:var(--lav-deep); color:#fff; }
   .ko-sub { font-weight:400; font-size:13.5px; color:var(--sub); }
+  h1 .ko-sub { display:block; font-size:14.5px; color:#4a6b3f; margin-top:1px; }
   @media (max-width:420px) { .row { grid-template-columns:1fr; } .grid { gap:4px; } .day { min-height:60px; font-size:15px; } h1 { font-size:26px; } .langbar button { padding:4px 10px; font-size:13.5px; } }
 </style>
 </head>
@@ -199,10 +200,16 @@ function drawLangBar() {
     bar.appendChild(b);
   });
 }
+/* 제목: 선생님이 따로 적은 제목이 있으면 번역 제목 뒤에 작게 같이 보여 줍니다. */
+function setTitle() {
+  const custom = srvTitle && srvTitle !== I18N.ko.title ? srvTitle : "";
+  if (lang === "ko") { $("title").textContent = "🐥 " + (srvTitle || T("title")); document.title = srvTitle || T("title"); return; }
+  $("title").innerHTML = "🐥 " + esc(T("title")) + (custom ? ' <span class="ko-sub">(' + esc(custom) + ")</span>" : "");
+  document.title = T("title");
+}
 function applyLang() {
   document.documentElement.lang = lang;
-  $("title").textContent = "🐥 " + (srvTitle || T("title"));
-  document.title = srvTitle || T("title");
+  setTitle();
   $("sub").textContent = T("sub");
   $("step1").textContent = T("step1");
   $("calHint").textContent = T("calHint");
@@ -232,7 +239,7 @@ async function load() {
     const j = await get();
     if (!j.ok) throw new Error(j.error || "불러오기 실패");
     slots = j.slots || [];
-    if (j.title) { srvTitle = j.title; $("title").textContent = "🐥 " + j.title; document.title = j.title; }
+    if (j.title) { srvTitle = j.title; setTitle(); }
     if (j.rosterOn) $("top").dataset.roster = "1";
     // 가장 가까운 상담 가능 날짜의 달을 먼저 보여주기
     const first = slots.filter(s => !s.taken).map(s => s.date).sort()[0];
