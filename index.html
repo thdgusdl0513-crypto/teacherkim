@@ -188,6 +188,23 @@ function dowNames() {
   const out = []; for (let i = 0; i < 7; i++) out.push(fmt(new Date(2024, 8, 1 + i), { weekday: "short" }));
   return out;
 }
+/* 선생님이 적은 상담 시간 이름(점심 상담, 방과후 상담 …)도 번역합니다.
+   아래 표에 없는 이름은 적으신 그대로 나옵니다. */
+const SLOTN = {"점심상담":{"ko":"점심 상담","en":"Lunchtime counseling","zh":"午休咨询","vi":"Tư vấn giờ trưa","ru":"Консультация в обеденное время","uz":"Tushlik vaqtidagi suhbat","th":"ปรึกษาช่วงพักกลางวัน","fil":"Konsultasyon sa tanghalian","mn":"Өдрийн завсарлагааны зөвлөгөө"},"방과후상담":{"ko":"방과후 상담","en":"After-school counseling","zh":"放学后咨询","vi":"Tư vấn sau giờ học","ru":"Консультация после уроков","uz":"Darsdan keyingi suhbat","th":"ปรึกษาหลังเลิกเรียน","fil":"Konsultasyon pagkatapos ng klase","mn":"Хичээлийн дараах зөвлөгөө"},"아침상담":{"ko":"아침 상담","en":"Morning counseling","zh":"早晨咨询","vi":"Tư vấn buổi sáng","ru":"Утренняя консультация","uz":"Ertalabki suhbat","th":"ปรึกษาตอนเช้า","fil":"Konsultasyon sa umaga","mn":"Өглөөний зөвлөгөө"},"저녁상담":{"ko":"저녁 상담","en":"Evening counseling","zh":"晚间咨询","vi":"Tư vấn buổi tối","ru":"Вечерняя консультация","uz":"Kechki suhbat","th":"ปรึกษาตอนเย็น","fil":"Konsultasyon sa gabi","mn":"Оройн зөвлөгөө"},"야자상담":{"ko":"야자 상담","en":"Evening study counseling","zh":"晚自习咨询","vi":"Tư vấn giờ tự học buổi tối","ru":"Консультация во время вечерней самоподготовки","uz":"Kechki mustaqil darsdagi suhbat","th":"ปรึกษาช่วงติวเย็น","fil":"Konsultasyon sa gabing pag-aaral","mn":"Оройн бие даалтын үеийн зөвлөгөө"},"야간자율학습상담":{"ko":"야간자율학습 상담","en":"Evening study counseling","zh":"晚自习咨询","vi":"Tư vấn giờ tự học buổi tối","ru":"Консультация во время вечерней самоподготовки","uz":"Kechki mustaqil darsdagi suhbat","th":"ปรึกษาช่วงติวเย็น","fil":"Konsultasyon sa gabing pag-aaral","mn":"Оройн бие даалтын үеийн зөвлөгөө"},"쉬는시간상담":{"ko":"쉬는 시간 상담","en":"Break-time counseling","zh":"课间咨询","vi":"Tư vấn giờ ra chơi","ru":"Консультация на перемене","uz":"Tanaffusdagi suhbat","th":"ปรึกษาช่วงพัก","fil":"Konsultasyon sa recess","mn":"Завсарлагааны зөвлөгөө"},"진로상담":{"ko":"진로 상담","en":"Career counseling","zh":"升学就业咨询","vi":"Tư vấn hướng nghiệp","ru":"Профориентационная консультация","uz":"Kasb tanlash bo‘yicha suhbat","th":"ปรึกษาเรื่องการเรียนต่อและอาชีพ","fil":"Konsultasyon sa karera","mn":"Мэргэжил сонголтын зөвлөгөө"},"학부모상담":{"ko":"학부모 상담","en":"Parent counseling","zh":"家长咨询","vi":"Tư vấn với phụ huynh","ru":"Консультация для родителей","uz":"Ota-onalar bilan suhbat","th":"ปรึกษากับผู้ปกครอง","fil":"Konsultasyon sa magulang","mn":"Эцэг эхийн зөвлөгөө"},"교우관계상담":{"ko":"교우관계 상담","en":"Friendship counseling","zh":"交友咨询","vi":"Tư vấn về bạn bè","ru":"Консультация об отношениях с друзьями","uz":"Do‘stlik munosabatlari bo‘yicha suhbat","th":"ปรึกษาเรื่องเพื่อน","fil":"Konsultasyon tungkol sa kaibigan","mn":"Найзын харилцааны зөвлөгөө"},"학습상담":{"ko":"학습 상담","en":"Study counseling","zh":"学习咨询","vi":"Tư vấn học tập","ru":"Консультация по учёбе","uz":"O‘qish bo‘yicha suhbat","th":"ปรึกษาเรื่องการเรียน","fil":"Konsultasyon sa pag-aaral","mn":"Сургалтын зөвлөгөө"},"개인상담":{"ko":"개인 상담","en":"Personal counseling","zh":"个别咨询","vi":"Tư vấn cá nhân","ru":"Индивидуальная консультация","uz":"Shaxsiy suhbat","th":"ปรึกษาส่วนตัว","fil":"Personal na konsultasyon","mn":"Хувийн зөвлөгөө"},"전화상담":{"ko":"전화 상담","en":"Phone counseling","zh":"电话咨询","vi":"Tư vấn qua điện thoại","ru":"Консультация по телефону","uz":"Telefon orqali suhbat","th":"ปรึกษาทางโทรศัพท์","fil":"Konsultasyon sa telepono","mn":"Утсаар зөвлөгөө"},"상담":{"ko":"상담","en":"Counseling","zh":"咨询","vi":"Tư vấn","ru":"Консультация","uz":"Suhbat","th":"ปรึกษา","fil":"Konsultasyon","mn":"Зөвлөгөө"},"면담":{"ko":"면담","en":"Meeting","zh":"面谈","vi":"Gặp mặt trao đổi","ru":"Беседа","uz":"Uchrashuv","th":"พบพูดคุย","fil":"Pagkikita","mn":"Уулзалт"},"점심시간":{"ko":"점심시간","en":"Lunchtime","zh":"午休时间","vi":"Giờ trưa","ru":"Обеденное время","uz":"Tushlik vaqti","th":"ช่วงพักกลางวัน","fil":"Tanghalian","mn":"Өдрийн завсарлагаан"},"점심":{"ko":"점심","en":"Lunchtime","zh":"午休","vi":"Giờ trưa","ru":"Обеденное время","uz":"Tushlik vaqti","th":"ช่วงพักกลางวัน","fil":"Tanghalian","mn":"Өдрийн завсарлагаан"},"방과후":{"ko":"방과후","en":"After school","zh":"放学后","vi":"Sau giờ học","ru":"После уроков","uz":"Darsdan keyin","th":"หลังเลิกเรียน","fil":"Pagkatapos ng klase","mn":"Хичээлийн дараа"},"아침":{"ko":"아침","en":"Morning","zh":"早晨","vi":"Buổi sáng","ru":"Утро","uz":"Ertalab","th":"ตอนเช้า","fil":"Umaga","mn":"Өглөө"}};
+const SLOTKEYS = Object.keys(SLOTN).sort((a, b) => b.length - a.length);
+function trSlot(name) {
+  const raw = String(name == null ? "" : name).trim();
+  if (!raw) return T("slotName");
+  if (lang === "ko") return raw;
+  const m = raw.match(/^(.*?)\s*([(（][^)）]*[)）])\s*$/);
+  const core = m ? m[1] : raw, tail = m ? " " + m[2] : "";
+  const key = core.replace(/\s+/g, "");
+  if (SLOTN[key] && SLOTN[key][lang]) return SLOTN[key][lang] + tail;
+  for (const k of SLOTKEYS) {
+    if (key.includes(k) && SLOTN[k][lang]) return (key.split(k).join(" " + SLOTN[k][lang] + " ")).replace(/\s+/g, " ").trim() + tail;
+  }
+  return raw;
+}
 const ymLabel = d => CAL[lang] ? CAL[lang].ym(d) : fmt(d, { year: "numeric", month: "long" });
 const mdLabel = d => CAL[lang] ? CAL[lang].md(d) : fmt(d, { month: "long", day: "numeric", weekday: "short" });
 function drawLangBar() {
@@ -275,7 +292,7 @@ function drawSlots() {
   slots.filter(s => s.date === selDate).sort((a, b) => a.start.localeCompare(b.start)).forEach(s => {
     const b = document.createElement("button");
     b.className = "slot" + (s.taken ? " full" : "") + (selSlot && selSlot.id === s.id ? " sel" : "");
-    b.innerHTML = `<b>${s.taken ? "🔒" : "🌿"} ${s.start} ~ ${s.end}</b><span>${esc(s.name || T("slotName"))} · ${s.taken ? T("slotFull") : T("slotOpen")}</span>`;
+    b.innerHTML = `<b>${s.taken ? "🔒" : "🌿"} ${s.start} ~ ${s.end}</b><span>${esc(trSlot(s.name))} · ${s.taken ? T("slotFull") : T("slotOpen")}</span>`;
     if (!s.taken) b.onclick = () => { selSlot = s; drawSlots(); };
     box.appendChild(b);
   });
@@ -314,7 +331,7 @@ async function myList() {
     if (!j.reqs.length) return msg(box, T("noReq"), true);
     j.reqs.forEach(r => {
       const d = document.createElement("div"); d.className = "req";
-      const l = document.createElement("div"); l.innerHTML = `<b>${r.date} ${r.start}~${r.end}</b> <span class="hint">${r.slot || ""}</span>${r.topic ? `<div class="hint"></div>` : ""}`;
+      const l = document.createElement("div"); l.innerHTML = `<b>${r.date} ${r.start}~${r.end}</b> <span class="hint">${r.slot ? esc(trSlot(r.slot)) : ""}</span>${r.topic ? `<div class="hint"></div>` : ""}`;
       if (r.topic) l.lastChild.textContent = r.topic;
       const rt = document.createElement("div"); rt.style.cssText = "display:flex;gap:8px;align-items:center";
       const t = document.createElement("span"); t.className = "tag " + r.status; t.textContent = r.status === "대기" ? T("stWait") : r.status === "승인" ? T("stOk") : r.status === "거절" ? T("stNo") : r.status === "취소" ? T("stCx") : r.status; rt.appendChild(t);
