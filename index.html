@@ -96,6 +96,8 @@
         <label>🐸 이름<input id="name" maxlength="10" autocomplete="off"></label>
       </div>
       <label>🌿 상담하고 싶은 내용 (선택)<textarea id="topic" rows="3" maxlength="200" placeholder="예: 진로 고민이 있어요"></textarea></label>
+      <label>📬 이메일 (선택)<input id="email" type="email" maxlength="100" placeholder="예: hong@gmail.com" autocomplete="email"></label>
+      <p class="hint">적어 두면 선생님이 승인했을 때 <b>메일로 알려 드려요.</b> 안 적어도 신청은 됩니다.</p>
       <label>🥝 확인용 비밀번호 (숫자 4자리)<input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
       <p class="hint">🍃 신청 결과를 확인하거나 취소할 때 필요해요. 친구에게 알려주지 마세요.</p>
       <button class="btn" id="send">🍀 신청하기</button>
@@ -195,12 +197,12 @@ $("send").onclick = async () => {
   if (!/^\d{4}$/.test(pin)) return msg($("sendMsg"), "확인용 비밀번호는 숫자 4자리예요.", false);
   $("send").disabled = true; msg($("sendMsg"), "⏳ 신청 중…", true);
   try {
-    const j = await post({ action: "reserve", slotId: selSlot.id, no, name, topic: $("topic").value.trim(), pin });
+    const j = await post({ action: "reserve", slotId: selSlot.id, no, name, topic: $("topic").value.trim(), pin, email: $("email").value.trim() });
     if (!j.ok) throw new Error(j.error || "신청 실패");
     $("topic").value = ""; $("pin").value = "";
     $("mno").value = no; $("mname").value = name;
     selSlot = null; await load(); drawSlots(); $("formBox").hidden = true;
-    msg($("sendMsg"), "🍀 신청이 접수됐어요! 선생님이 승인하면 확정됩니다. 아래 '내 신청 확인'에서 결과를 볼 수 있어요.", true);
+    msg($("sendMsg"), "🍀 신청이 접수됐어요! 선생님이 승인하면 확정됩니다." + ($("email").value.trim() ? " 확정되면 적어 준 메일로 알려 드릴게요." : " 아래 '내 신청 확인'에서 결과를 볼 수 있어요."), true);
     $("slotCard").hidden = false; $("sendMsg").scrollIntoView({ behavior: "smooth", block: "center" });
   } catch (e) { msg($("sendMsg"), e.message, false); await load(); drawSlots(); $("formBox").hidden = !selSlot; }
   $("send").disabled = false;
