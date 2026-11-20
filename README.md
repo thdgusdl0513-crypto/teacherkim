@@ -14,7 +14,7 @@
 | 무엇 | 지금 값 | 바꾸는 곳 |
 |---|---|---|
 | 학생 입장 암호 | `homesweetreading` | `class-config.js`의 pw **그리고** `database.rules.json`의 `homesweetreading` 전부 |
-| 선생님 코드 | `songhyeon-teacher` | `database.rules.json`의 `songhyeon-teacher` 전부 |
+| 선생님 코드 | `19700920` | `database.rules.json`의 `19700920` 전부 |
 
 암호를 바꾸면 규칙을 Firebase 콘솔에 다시 붙여 넣고 게시해 주세요.
 선생님 코드는 규칙 파일에만 있어서 학생들은 볼 수 없어요.
