@@ -123,7 +123,7 @@ function updateCam(dt,snap){const p=me.root.position;const pose=performance.now(
   if(snap){camera.position.copy(want);camT.copy(lookW);}else{const k=pose?1-Math.pow(.02,dt):1-Math.pow(.002,dt);camera.position.lerp(want,k);camT.lerp(lookW,1-Math.pow(.0008,dt));}camera.lookAt(camT);}
 
 /* ---------- zone & guide ---------- */
-function updateZone(){const info=ST.space==='campus'?{en:'THE COURTYARD · SONGHYEON',title:SEASON.key==='xmas'?'눈 내리는 마당,<br>트리 아래 모여요.':SEASON.key==='halloween'?'호박등 켜진 밤,<br>학당 마당으로.':SEASON.key==='birthday'?'생일 축하의 달,<br>케이크 앞에서.':SEASON.blossom?'벚꽃 흩날리는<br>학당 마당.':SEASON.key==='autumn'?'단풍 물든<br>학당 마당.':SEASON.rain?'장맛비 내리는<br>학당 마당.':SEASON.snow?'눈 쌓인<br>학당 마당.':'햇살 머무는<br>학당 마당.',loc:'몽원학당 · 강의동, 도서관, 기숙사'}:{en:ROOMS[ST.space].en,title:ROOMS[ST.space].title,loc:ROOMS[ST.space].name+' · '+ROOMS[ST.space].tag};
+function updateZone(){const info=ST.space==='campus'?{en:'THE COURTYARD · SONGHYEON',title:SEASON.key==='xmas'?'눈 내리는 마당,<br>트리 아래 모여요.':SEASON.key==='halloween'?'호박등 켜진 밤,<br>학당 마당으로.':SEASON.key==='birthday'?'생일 축하의 달,<br>케이크 앞에서.':SEASON.blossom?'벚꽃 흩날리는<br>학당 마당.':SEASON.key==='autumn'?'단풍 물든<br>학당 마당.':SEASON.rain?'장맛비 내리는<br>학당 마당.':SEASON.snow?'눈 쌓인<br>학당 마당.':'햇살 머무는<br>학당 마당.',loc:'청도학당 · 강의동, 도서관, 기숙사'}:{en:ROOMS[ST.space].en,title:ROOMS[ST.space].title,loc:ROOMS[ST.space].name+' · '+ROOMS[ST.space].tag};
   $('#zName').textContent=ST.space==='campus'?`학당 마당 · ${SEASON.ico} ${SEASON.month}월`+(SEASON.wx?` · ${WX_LABEL[SEASON.wx][0]} ${SEASON.temp}°`:''):ROOMS[ST.space].name;$('#zEn').textContent=info.en;$('#zTitle').innerHTML=info.title;const bt=$('#bigTitle');bt.classList.add('show');clearTimeout(updateZone.t);updateZone.t=setTimeout(()=>bt.classList.remove('show'),3600);$('#chatWrap').classList.toggle('show',CHAT_SP.includes(ST.space));renderChat();}
 function updateSeasonChip(){if(ST.space==='campus')$('#zName').textContent=`학당 마당 · ${SEASON.ico} ${SEASON.month}월`+(SEASON.wx?` · ${WX_LABEL[SEASON.wx][0]} ${SEASON.temp}°`:'');}
 const NAMEOF={library:'도서관',basics:'마법학 기초 강의동',potion:'마법약 강의동',herbs:'약초학 온실',training:'기초체력 수련장',dorm:'기숙사'};
@@ -173,12 +173,12 @@ function updateConn(){const n=new Set(PEERS.filter(p=>p.kind==='viewer').map(p=>
 const REMOTES={};let presT=0,presDirty=false;
 function myPresence(){const p=me.root.position;return {sp:ST.space,x:+p.x.toFixed(2),z:+p.z.toFixed(2),ry:+me.root.rotation.y.toFixed(2),av:ST.avatar||'girl',st:ST.sitting,rd:TM.run?Date.now()-elapsed():0,bk:($('#tmBook').value||'').slice(0,24),pt:ST.pet||'none',lk:lookStr(ST.look),nk:(ST.nick||'').slice(0,12),fx:ST.fx,em:MY_EM,cl:MY_CL};}
 function pushPresence(now){presDirty=true;if(now)flushPresence();}
-function flushPresence(){if(!ROOM||!presDirty)return;presDirty=false;presT=performance.now();ROOM.presence(myPresence()).catch(()=>{});}
+function flushPresence(){if(!ROOM||!presDirty||!window.__entered)return;presDirty=false;presT=performance.now();ROOM.presence(myPresence()).catch(()=>{});}
 function setupRoom(){ROOM.onPeers(ch=>{PEERS=ch.peers.slice();ch.left.forEach(p=>dropRemote(p.peer));ch.peers.forEach(p=>{if(!p.sameTab&&p.kind==='viewer')upsertRemote(p);});resolveNames(PEERS.map(p=>p.by));updateConn();renderTogether();const sig=onlineFriends().map(r=>r.by+r.pr.sp+(r.pr.rd?1:0)).join();if(sig!==window.__frSig){window.__frSig=sig;if($('#friends').classList.contains('show'))renderFriends();}},()=>{PEERS=[];updateConn();});
   ROOM.on('chat',m=>{if(m.isMe&&m.sameTab)return;const d=m.data||{};if(typeof d.t!=='string')return;const r=REMOTES[m.peer];addChat(m.by,d.t.slice(0,200),m.peer,false,r&&r.pr&&typeof r.pr.nk==='string'?r.pr.nk.slice(0,12):'',typeof d.sp==='string'?d.sp:'dorm');});
   ROOM.onConnection(c=>{if(c)pushPresence(true);});pushPresence(true);renderChat();}
 function dropRemote(peer){const r=REMOTES[peer];if(!r)return;scene.remove(r.A.root,r.L.sprite,r.B.sprite);if(r.C)scene.remove(r.C.sprite);if(r.pet)scene.remove(r.pet.root);delete REMOTES[peer];}
-function upsertRemote(p){const pr=p.presence||{};let r=REMOTES[p.peer];if(!pr.sp){if(r)r.A.root.visible=false;return;}
+function upsertRemote(p){const pr=p.presence||{};let r=REMOTES[p.peer];if(!pr.sp||!pr.nk){if(r){r.A.root.visible=false;r.pr=pr;}return;}
   const lk=typeof pr.lk==='string'?pr.lk.slice(0,240):'';if(!r||r.av!==pr.av||r.lk!==lk){if(r)scene.remove(r.A.root);const A=makeAvatar(AVMAP[pr.av]||pr.av==='shiba'?pr.av:'girl',lookParse(lk));if(r)r.lk=lk;scene.add(A.root);A.root.position.set(+pr.x||0,0,+pr.z||0);if(!r){r={L:makeLabel('친구'),B:makeBubble(),ph:0,amt:0,lk};scene.add(r.L.sprite,r.B.sprite);}r.A=A;r.av=pr.av;}
   const pid=PETMAP[pr.pt]?pr.pt:'none';if(r.petId!==pid){if(r.pet)scene.remove(r.pet.root);r.pet=makePet(pid);r.petId=pid;if(r.pet){r.pet.root.position.copy(r.A.root.position);scene.add(r.pet.root);}}
   if(typeof pr.em==='string'&&pr.em!==r.emSeen){const first=r.emSeen===undefined;r.emSeen=pr.em;const k=pr.em.split(':')[0];if(!first&&pr.sp===ST.space){playEmote(r.A,k);if(k==='heart'||k==='wave'){const nm=nameOf(p.by,pr.nk);toast(k==='heart'?`${esc(nm)}님이 하트를 보냈어요 💗`:`${esc(nm)}님이 인사해요 👋`);}}}else if(r.emSeen===undefined)r.emSeen=pr.em||'';
@@ -260,7 +260,7 @@ function goNear(sp,x,z){const a=Math.random()*Math.PI*2;const at={x:x+Math.cos(a
 $('#callGo').addEventListener('click',()=>{$('#callPop').classList.remove('show');if(callFrom){goNear(callFrom.sp,callFrom.x,callFrom.z);const by=callFrom.by;setTimeout(()=>{doEmote('wave');},1100);toast(esc(nameOf(by))+'님 곁으로 왔어요');}});
 $('#callNo').addEventListener('click',()=>$('#callPop').classList.remove('show'));
 $('#frAll').addEventListener('click',()=>{sendCall('*');closeSheets();});
-$('#frShare').addEventListener('click',async()=>{const url=location.href.split('#')[0];const text='송현학당에 들어와! 같이 공부하자 📚';try{if(navigator.share){await navigator.share({title:'몽원학당',text,url});return;}}catch(e){if(e&&e.name==='AbortError')return;}try{await navigator.clipboard.writeText(text+'\n'+url);toast('링크를 복사했어요<small>카톡에 붙여 넣어 보내 주세요</small>');}catch(e){toast(esc(url));}});
+$('#frShare').addEventListener('click',async()=>{const url=location.href.split('#')[0];const text='송현학당에 들어와! 같이 공부하자 📚';try{if(navigator.share){await navigator.share({title:'청도학당',text,url});return;}}catch(e){if(e&&e.name==='AbortError')return;}try{await navigator.clipboard.writeText(text+'\n'+url);toast('링크를 복사했어요<small>카톡에 붙여 넣어 보내 주세요</small>');}catch(e){toast(esc(url));}});
 $('#frList').addEventListener('click',e=>{const k=e.target.closest('[data-kick]');if(k){const id=k.dataset.kick;if(kickArm!==id){kickArm=id;k.textContent='정말 내보내기';k.classList.add('armed');clearTimeout(kickT);kickT=setTimeout(()=>{kickArm=null;renderFriends();},3000);return;}kickArm=null;kickFriend(id,k.dataset.nk||'친구');return;}const c=e.target.closest('[data-call]');if(c){sendCall(c.dataset.call);return;}const g=e.target.closest('[data-go]');if(g){const r=REMOTES[g.dataset.go];if(r&&r.pr){goNear(r.pr.sp,+r.pr.x||0,+r.pr.z||0);toast(esc(nameOf(r.by,r.pr.nk))+'님을 찾아왔어요');}}});
 $('#chip').addEventListener('click',e=>{if(e.target.closest('#plTk'))return;openSheet('friends');});
 function doEmote(k){MY_EM=k+':'+Date.now();playEmote(me,k);showFace((EM_DUR[k]||2)*1000+400);pushPresence(true);}
@@ -392,7 +392,7 @@ async function afterGate(){const t0=Date.now();while(MODE==='shared'&&!membersRe
   if(ST.nick){$('#welcome').textContent=ST.nick+'님, 다시 오셨네요!';show('stepIn');}else{renderAvatars();show('stepNick');setTimeout(()=>$('#nickIn').focus(),100);}}
 $('#pwGo').addEventListener('click',tryPw);$('#pwIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing)tryPw();});
 $('#nickGo').addEventListener('click',()=>{const v=$('#nickIn').value.trim().slice(0,12);if(!v){$('#nickMsg').textContent='닉네임을 적어 주세요.';$('#nickIn').focus();return;}ST.nick=v;LS.set('nick',v);{const old=Object.entries(MEMBERS).find(([id,m])=>id!==MYID&&m&&typeof m.nick==='string'&&m.nick.trim().toLowerCase()===v.toLowerCase());if(old){const m=old[1];if(m.look){ST.look=lookParse(m.look);LS.set('look',m.look);}if(m.pet&&PETMAP[m.pet]){ST.pet=m.pet;LS.set('pet',m.pet);try{setPet(m.pet);}catch(e){}}if(m.av&&AVMAP[m.av]){ST.avatar=m.av;LS.set('avatar',m.av);}try{setAvatar(ST.avatar||'girl');}catch(e){}toast('예전 캐릭터를 불러왔어요 🎉<small>'+esc(v)+'님, 다시 만나서 반가워요</small>');}}if(!ST.avatar){ST.avatar='girl';LS.set('avatar','girl');}saveMember();pushPresence(true);updateMe();$('#welcome').textContent=v+'님, 입학을 환영해요!';$('#welcomeSub').textContent='닉네임은 다음에 와도 그대로예요. 설정에서 바꿀 수 있어요.';show('stepIn');});
-const enter=s=>{$('#intro').classList.add('hide');if(s)setSound(true);setTimeout(()=>{$('#intro').remove();updateZone();if(!LS.get('prologue',0)&&window.showPrologue)showPrologue(askStamp);else askStamp();},900);setTimeout(()=>{const hn=$('#hint');if(hn)hn.style.opacity=0;},9000);};
+const enter=s=>{window.__entered=true;pushPresence(true);$('#intro').classList.add('hide');if(s)setSound(true);setTimeout(()=>{$('#intro').remove();updateZone();if(!LS.get('prologue',0)&&window.showPrologue)showPrologue(askStamp);else askStamp();},900);setTimeout(()=>{const hn=$('#hint');if(hn)hn.style.opacity=0;},9000);};
 $('#goSound').addEventListener('click',()=>enter(true));$('#proAgain').addEventListener('click',()=>{closeSheets();if(window.showPrologue)showPrologue();});$('#goQuiet').addEventListener('click',()=>enter(false));
 let cloudPending=null;enterSpace('campus',null,true);updateSeasonChip();renderChat();setGuide(true);updateConn();updateMe();cloudPending=initCloud();Promise.resolve(cloudPending).finally(()=>setTimeout(()=>{CLOUD_DONE=true;updateConn();},1500));fetchWx();setInterval(()=>fetchWx(),30*60e3);renderTicker();notifyNewSongs();
 
@@ -463,3 +463,25 @@ window.__dbg={me,enterSpace,get SP(){return SP;},sitDown,ST,TM};
 
 setInterval(()=>{if(ADMIN_ON)watchBans();if(window.__rulesOld!==window.__rulesShown){window.__rulesShown=window.__rulesOld;updateConn();}},3000);
 $('#banList')&&$('#banList').addEventListener('click',async e=>{const b=e.target.closest('[data-unkick]');if(!b)return;try{await window.__cloudAdmin.unkick(b.dataset.unkick);toast('다시 들어올 수 있어요<small>친구가 암호를 한 번 더 적으면 돼요</small>');}catch(err){toast('바꾸지 못했어요');}});
+
+/* ---------- 키보드가 올라와도 화면이 밀리지 않게 ---------- */
+(function(){const vv=window.visualViewport;if(!vv)return;const st=document.getElementById('stage');let last='';
+  const fit=()=>{const open=vv.height<innerHeight-120&&document.activeElement&&/INPUT|TEXTAREA/.test(document.activeElement.tagName)&&!document.activeElement.closest('.modal');
+    const k=open?Math.round(vv.offsetTop)+'|'+Math.round(vv.height):'';if(k===last)return;last=k;
+    if(open){st.style.top=vv.offsetTop+'px';st.style.height=vv.height+'px';st.style.bottom='auto';}else{st.style.top='';st.style.height='';st.style.bottom='';window.scrollTo(0,0);}
+    document.body.classList.toggle('kbOpen',!!open);resize();};
+  vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit);
+  document.addEventListener('focusin',()=>{setTimeout(fit,60);setTimeout(fit,350);});document.addEventListener('focusout',()=>setTimeout(fit,120));})();
+/* ---------- 사진 찍기 ---------- */
+let shotBlob=null,shotUrl='';
+async function takeShot(){closeSheets();$('#facePop').classList.remove('show');await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  try{renderer.render(scene,camera);const src=renderer.domElement;const W=src.width,H=src.height;const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(src,0,0);
+    const s=Math.max(1,W/700);const d=new Date();const txt=`송현학당 · ${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;g.font=`600 ${Math.round(15*s)}px 'Gowun Dodum',sans-serif`;const tw=g.measureText(txt).width;
+    const px=W-tw-26*s,py=H-22*s;g.fillStyle='rgba(251,243,226,.82)';g.beginPath();g.roundRect?g.roundRect(px-12*s,py-20*s,tw+24*s,30*s,15*s):g.rect(px-12*s,py-20*s,tw+24*s,30*s);g.fill();g.fillStyle='#5a3a22';g.fillText(txt,px,py);
+    const fl=$('#flash');fl.classList.add('on');setTimeout(()=>fl.classList.remove('on'),60);try{if(typeof chime==='function')chime();}catch(e){}
+    shotBlob=await new Promise(r=>c.toBlob(r,'image/jpeg',.92));if(shotUrl)URL.revokeObjectURL(shotUrl);shotUrl=URL.createObjectURL(shotBlob);$('#shotImg').src=shotUrl;setTimeout(()=>openSheet('shotBox'),250);
+  }catch(e){toast('사진을 찍지 못했어요');}}
+const shotName=()=>{const d=new Date();return `송현학당_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.jpg`;};
+$('#shotBtn').addEventListener('click',takeShot);$('#camShot').addEventListener('click',takeShot);
+$('#shotShare').addEventListener('click',async()=>{if(!shotBlob)return;const f=new File([shotBlob],shotName(),{type:'image/jpeg'});try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'송현학당'});return;}}catch(e){if(e&&e.name==='AbortError')return;}$('#shotDl').click();});
+$('#shotDl').addEventListener('click',()=>{if(!shotUrl)return;const a=document.createElement('a');a.href=shotUrl;a.download=shotName();document.body.appendChild(a);a.click();a.remove();});

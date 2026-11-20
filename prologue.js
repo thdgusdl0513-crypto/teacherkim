@@ -1,6 +1,6 @@
 /* 프롤로그 · 처음 들어온 친구를 위한 컷만화 이용 안내 (해태가 안내해요) */
 (function(){
-const CLS=!!window.CLASS;const NAME=CLS?(window.CLASS.name||'송현학당'):'몽원학당';
+const CLS=!!window.CLASS;const NAME=CLS?(window.CLASS.name||'송현학당'):'청도학당';
 const css=`
 #pro{position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 20%,#3a2a4a 0%,#1a1220 70%,#0c0810 100%);opacity:0;transition:opacity .45s;font-family:'Gowun Dodum',sans-serif;color:#2a1c14;-webkit-user-select:none;user-select:none;touch-action:pan-y}
 #pro.on{opacity:1}
