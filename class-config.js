@@ -4,6 +4,6 @@
 window.CLASS = {
   name: '송현학당',
   pwHash: 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f',  // 학생 암호
-  tHash: '89fbd814f0bdb365cd145b156123eaba8bff25cf3b937d6155ff1b670a78a4f5',   // 선생님 암호
-  base: 'songhyeon/'       // Firebase 안의 저장 칸 (운서학당과 섞이지 않게) — 바꾸지 마세요
+  tHash: 'f91bfed0a0f16dfb501cd4f62f8ff5da73f4fb3ff3d265637f97e843dd2288a3',   // 선생님 암호
+  base: 'songhyeon/'       // Firebase 안의 저장 칸 (몽원학당과 섞이지 않게) — 바꾸지 마세요
 };
