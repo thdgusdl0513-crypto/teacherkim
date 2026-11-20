@@ -1,5 +1,5 @@
 /* 송현학당 · 학급 기능: 선생님 화면(출석·공부 시간), 강의실 이름, 채팅 시간, 입장 시간 */
-const CLS_DEF={rooms:{},chat:'on',ch:[8,22],lock:'off',lk:[23,6]};
+const CLS_DEF={boards:{},rooms:{},chat:'on',ch:[8,22],lock:'off',lk:[23,6]};
 let CLS=JSON.parse(JSON.stringify(CLS_DEF)),clsSub=false;
 const RKEYS=[['basics','강의실 1'],['potion','강의실 2'],['herbs','강의실 3'],['training','강의실 4'],['library','도서관'],['dorm','기숙사']];
 const hh=h=>`${h}시`;
@@ -8,12 +8,13 @@ function chatOpen(){if(ADMIN_ON)return true;if(CLS.chat==='off')return false;if(
 function isLocked(){if(ADMIN_ON||CLS.lock!=='on')return false;return inHours(+CLS.lk[0],+CLS.lk[1],new Date().getHours());}
 
 function applyRooms(){let changed=false;RKEYS.forEach(([k])=>{const v=(CLS.rooms||{})[k];const D=ROOM_DEF[k];if(!D)return;const nm=(typeof v==='string'&&v.trim())?v.trim().slice(0,14):D.name;
-    if(ROOMS[k].name!==nm){ROOMS[k].name=nm;changed=true;}if(SUBJ[k])SUBJ[k][0]=nm;const b=document.querySelector(`#mapList [data-go="${k}"] b`);if(b)b.textContent=nm;});
+    if(ROOMS[k].name!==nm){ROOMS[k].name=nm;changed=true;}const B=(CLS.boards||{})[k]||{};const custom=nm!==D.name;ROOMS[k].title=custom?(B[1]?esc(String(B[1]).slice(0,24)):esc(nm))+'<br>오늘도 함께 공부해요.':D.title;ROOMS[k].en=custom?'SONGHYEON · '+(k==='library'?'LIBRARY':k==='dorm'?'DORMITORY':'CLASSROOM'):D.en;if(SUBJ[k])SUBJ[k][0]=nm;const b=document.querySelector(`#mapList [data-go="${k}"] b`);if(b)b.textContent=nm;});
   if(changed&&typeof rebuildSeason==='function'&&SP)rebuildSeason();}
 function applyChat(){const i=$('#chatIn');if(!i)return;const open=chatOpen();i.disabled=!open;$('#chatSend').disabled=!open;
   i.placeholder=open?'반 친구들에게 한마디':CLS.chat==='off'?'선생님이 채팅을 잠시 닫았어요':`채팅은 ${hh(CLS.ch[0])}~${hh(CLS.ch[1])}에 열려요`;}
 function applyLock(){const el=$('#closed');if(!el)return;const L=isLocked();el.classList.toggle('show',L);if(L)$('#closedTxt').innerHTML=`지금은 학당 문이 닫혀 있어요<br><small>${hh(CLS.lk[1])}에 다시 열려요 · 푹 쉬고 내일 만나요 🌙</small>`;}
-function applyCls(){applyRooms();applyChat();applyLock();}
+function applyBoards(){const nb=JSON.stringify(CLS.boards||{});if(nb===window.__bdSig)return;const first=window.__bdSig===undefined;window.__bdSig=nb;window.CLS_BOARDS=CLS.boards||{};if(!first||nb!=='{}'){if(typeof rebuildSeason==='function'&&SP)rebuildSeason();}}
+function applyCls(){applyBoards();applyRooms();applyChat();applyLock();}
 setInterval(()=>{if(!clsSub&&typeof DB!=='undefined'&&DB&&MODE==='shared'){clsSub=true;DB.doc('settings/class').onSnapshot(d=>{const v=(d&&d.exists&&d.data())||{};CLS=Object.assign(JSON.parse(JSON.stringify(CLS_DEF)),v);const arr=(x,d)=>x&&typeof x==='object'&&x[0]!=null&&x[1]!=null?[+x[0],+x[1]]:d;CLS.ch=arr(CLS.ch,CLS_DEF.ch);CLS.lk=arr(CLS.lk,CLS_DEF.lk);applyCls();if($('#teacher').classList.contains('show'))renderTeacher(true);},()=>{});}
   applyChat();applyLock();const t=$('#tTile');if(t)t.hidden=!ADMIN_ON;},1500);
 
@@ -37,6 +38,8 @@ function renderTeacher(keepForm){const el=$('#tBody');if(!el)return;if(!ADMIN_ON
     <div class="tLast">${r.last?'마지막 활동 '+ago(r.last):'아직 활동 없음'}</div></div>`).join(''):'<div class="empty">아직 들어온 학생이 없어요. 학생들에게 링크와 암호를 알려 주세요.</div>';
   if(!keepForm||!$('#tForm').dataset.ready)fillTeacherForm();}
 function fillTeacherForm(){const f=$('#tForm');f.dataset.ready='1';
+  const BD=[['basics','강의실 1 칠판',['第一講 · 마법학 기초','기(氣)의 흐름과 주문의 첫걸음','“서두르지 말고, 멈추지 말라.”']],['potion','강의실 2 칠판',['靈藥 · 마법약 수업','오늘의 조제 — 집중의 물약','솥 앞 의자에 앉아 타이머를 시작하세요']],['herbs','강의실 3 칠판',['藥草園 · 약초학','오늘의 약초 — 월광초 기르기']]];
+  $('#tBoards').innerHTML=BD.map(([k,lb,d])=>`<div class="tBd"><b>${lb}</b>${d.map((x,i)=>`<input data-bd="${k}" data-bi="${i}" maxlength="40" placeholder="${esc(x)}" value="${esc(((CLS.boards||{})[k]||{})[i]||'')}">`).join('')}</div>`).join('');
   $('#tRooms').innerHTML=RKEYS.map(([k,lb])=>`<label class="tIn"><span>${lb}</span><input data-room="${k}" maxlength="14" placeholder="${esc(ROOM_DEF[k].name)}" value="${esc((CLS.rooms||{})[k]||'')}"></label>`).join('');
   const hrs=sel=>Array.from({length:24},(_,h)=>`<option value="${h}">${h}시</option>`).join('');
   $('#tChat').value=CLS.chat;$('#tCh0').innerHTML=$('#tCh1').innerHTML=$('#tLk0').innerHTML=$('#tLk1').innerHTML=hrs();
@@ -51,5 +54,6 @@ document.addEventListener('DOMContentLoaded',()=>{});
   $('#tCsv').addEventListener('click',csvExport);$('#tChat').addEventListener('change',tVis);$('#tLock').addEventListener('change',tVis);
   $('#tSave').addEventListener('click',async()=>{if(!DB||MODE!=='shared'){toast('학당이 연결돼 있어야 저장할 수 있어요');return;}
     const rooms={};$$('#tRooms [data-room]').forEach(i=>{const v=i.value.trim().slice(0,14);if(v)rooms[i.dataset.room]=v;});
-    const v={rooms,chat:$('#tChat').value,ch:[+$('#tCh0').value,+$('#tCh1').value],lock:$('#tLock').value,lk:[+$('#tLk0').value,+$('#tLk1').value],ts:Date.now()};
+    const boards={};$$('#tBoards [data-bd]').forEach(i=>{const v=i.value.trim().slice(0,40);if(v){(boards[i.dataset.bd]=boards[i.dataset.bd]||{})[i.dataset.bi]=v;}});
+    const v={boards,rooms,chat:$('#tChat').value,ch:[+$('#tCh0').value,+$('#tCh1').value],lock:$('#tLock').value,lk:[+$('#tLk0').value,+$('#tLk1').value],ts:Date.now()};
     try{await DB.doc('settings/class').set(v);toast('학급 설정을 저장했어요<small>학생들 화면에도 바로 바뀌어요</small>');}catch(e){toast('저장하지 못했어요<small>선생님 코드가 맞는지 확인해 주세요</small>');}});})();
