@@ -136,7 +136,7 @@ async function addDoc(col,obj){obj=Object.assign({},obj,{by:MYID,ts:Date.now()})
   if(DB&&CANWRITE){try{await DB.collection(col).add(obj);return true;}catch(e){if(e.code==='invalid_argument'){CANWRITE=false;updateConn();toast('이 계정은 읽기만 할 수 있어요<small>만든 사람에게 편집 권한을 받아야 기록할 수 있어요</small>');}else if(e.code==='quota_exceeded')toast('저장 공간이 가득 찼어요<small>오래된 기록을 지워 주세요</small>');else toast('저장하지 못했어요<small>잠시 뒤 다시 시도해 주세요</small>');return false;}}
   if(DB&&!CANWRITE){toast('읽기 전용이라 저장할 수 없어요');return false;}
   obj.id='l'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);DATA[col].unshift(obj);DATA[col]=DATA[col].slice(0,LIM[col]);LS.set('local.'+col,DATA[col]);onData(col);return true;}
-async function delDoc(col,id){if(DB){try{await DB.collection(col).doc(id).delete();return true;}catch(e){toast('지우지 못했어요<small>'+(ADMIN_ON?'관리자 암호가 맞는지 확인해 주세요':'내가 올린 것만 지울 수 있어요')+'</small>');return false;}}DATA[col]=DATA[col].filter(d=>d.id!==id);LS.set('local.'+col,DATA[col]);onData(col);}
+async function delDoc(col,id){if(DB){try{await DB.collection(col).doc(id).delete();return true;}catch(e){toast('지우지 못했어요<small>'+(ADMIN_ON?'선생님만 지울 수 있어요':'내가 올린 것만 지울 수 있어요')+'</small>');return false;}}DATA[col]=DATA[col].filter(d=>d.id!==id);LS.set('local.'+col,DATA[col]);onData(col);}
 const MEMBERS={};let membersReady=false;
 function subMembers(){let done=false;const fin=()=>{if(!done){done=true;membersReady=true;}};setTimeout(fin,6000);DB.collection('members').limit(200).onSnapshot(s=>{s.docs.forEach(d=>{MEMBERS[d.id]=d.data();});if(!s.metadata.fromCache){const mine=MEMBERS[MYID];if(!done){if(mine){if(mine.nick){ST.nick=String(mine.nick).slice(0,12);LS.set('nick',ST.nick);pushPresence(true);}if(mine.av&&AVMAP[mine.av]&&mine.av!==ST.avatar){setAvatar(mine.av);}if(mine.pet&&PETMAP[mine.pet]&&mine.pet!==ST.pet)setPet(mine.pet,true);if(typeof mine.look==='string'&&mine.look!==lookStr(ST.look)){ST.look=lookParse(mine.look);LS.set('look',lookStr(ST.look));setAvatar(ST.avatar||'girl');}}else if(ST.nick)saveMember();}fin();}renderBoard();renderRecords();Object.values(REMOTES).forEach(r=>r.lastLabel='');updateMe();},()=>fin());}
 let memSaving=false,memAgain=false;async function saveMember(){if(!DB||MYID==='me')return;if(memSaving){memAgain=true;return;}memSaving=true;try{await DB.doc('members/'+MYID).set({nick:ST.nick||'',av:ST.avatar||'girl',pet:ST.pet||'none',look:lookStr(ST.look),ts:Date.now()});}catch(e){}memSaving=false;if(memAgain){memAgain=false;saveMember();}}
@@ -278,7 +278,7 @@ $('#wReset').addEventListener('click',()=>setLook(Object.assign({},DEFAULT_LOOK,
 $('#wCol').addEventListener('click',e=>{const b=e.target.closest('[data-ck]');if(!b)return;const L=Object.assign({},ST.look,{a:ST.look.a.slice(),c:Object.assign({},ST.look.c||{})});const i=+b.dataset.ci;if(i>0)L.c[b.dataset.ck]=i;else delete L.c[b.dataset.ck];setLook(L);});
 
 /* ---------- playlist ---------- */
-let LIKES=LS.get('local.likes',{}),plSort='hot',plOpen=null,armed=null,armT=null;let ADMIN_ON=!!LS.get('adminOn',false);
+let LIKES=LS.get('local.likes',{}),plSort='hot',plOpen=null,armed=null,armT=null;let ADMIN_ON=LS.get('pwok','')===((window.CLASS&&CLASS.tHash)||'-');document.body.classList.toggle('teacher',ADMIN_ON);
 const MUSIC_APPS=[['멜론',q=>'https://www.melon.com/search/total/index.htm?q='+q],['지니',q=>'https://www.genie.co.kr/search/searchMain?query='+q],['Spotify',q=>'https://open.spotify.com/search/'+q],['Apple Music',q=>'https://music.apple.com/kr/search?term='+q],['YouTube Music',q=>'https://music.youtube.com/search?q='+q]];
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const AM=Object.assign({},LS.get('amCache',{}));
@@ -342,12 +342,12 @@ $('#stampGo').addEventListener('click',async()=>{const k=dkey(new Date());myDays
 function askStamp(){const k=dkey(new Date());if(myDays[k]||LS.get('stampAsked','')===k)return;LS.set('stampAsked',k);setTimeout(()=>{if(!$$('.modal.show').length)openSheet('stamp');},1600);}
 /* ---------- 친구 내보내기 (관리자) ---------- */
 let BANS={},bansOff=null,kickArm=null,kickT;
-window.__onKicked=()=>{if(window.__kicked)return;window.__kicked=true;LS.set('pwok','');LS.set('pwk','');const el=document.createElement('div');el.id='kicked';el.innerHTML='<div class="paper"><div style="font-size:40px">🚪</div><b>학당에서 내보내졌어요</b><small>관리자에게 문의해 주세요</small></div>';document.body.appendChild(el);try{if(ROOM&&ROOM.presence)ROOM.presence({sp:null});}catch(e){}};
+window.__onKicked=()=>{if(window.__kicked)return;window.__kicked=true;LS.set('pwok','');LS.set('pwk','');const el=document.createElement('div');el.id='kicked';el.innerHTML='<div class="paper"><div style="font-size:40px">🚪</div><b>학당에서 내보내졌어요</b><small>선생님께 말씀드려 주세요</small></div>';document.body.appendChild(el);try{if(ROOM&&ROOM.presence)ROOM.presence({sp:null});}catch(e){}};
 function canKick(){return ADMIN_ON&&!!window.__cloudAdmin&&MODE==='shared';}
 function watchBans(){if(bansOff||!canKick())return;bansOff=window.__cloudAdmin.watchBans(b=>{BANS=b||{};renderBans();});}
 function renderBans(){const el=$('#banList');if(!el)return;const ids=Object.keys(BANS);el.innerHTML=!ADMIN_ON?'':ids.length?'<div class="sec">내보낸 친구</div>'+ids.map(id=>`<div class="frRow"><span><b>${esc((MEMBERS[id]&&MEMBERS[id].nick)||BANS[id].nick||'친구')}</b><small>${ago(BANS[id].ts||0)} 내보냄</small></span><button class="ghost" data-unkick="${id}">다시 들이기</button></div>`).join(''):'';}
-async function kickFriend(id,nick){try{await window.__cloudAdmin.kick(id,nick);Object.values(REMOTES).forEach(r=>{if(r.by===id)dropRemote(r.peer);});toast(esc(nick)+'님을 학당에서 내보냈어요<small>설정 → 연결에서 다시 들일 수 있어요</small>');renderFriends();}catch(e){toast('내보내지 못했어요<small>관리자 코드가 맞는지 확인해 주세요</small>');}}
-function renderAdmin(){watchBans();renderBans();const on=ADMIN_ON;$('#adminState').textContent=on?'선생님 모드 켜짐 · 설정에 \'선생님 화면\'이 생기고, 모든 쪽지와 추천곡을 지울 수 있어요':'꺼짐';$('#adminOff').hidden=!on;$('#adminIn').parentElement.hidden=on;}
+async function kickFriend(id,nick){try{await window.__cloudAdmin.kick(id,nick);Object.values(REMOTES).forEach(r=>{if(r.by===id)dropRemote(r.peer);});toast(esc(nick)+'님을 학당에서 내보냈어요<small>설정 → 연결에서 다시 들일 수 있어요</small>');renderFriends();}catch(e){toast('내보내지 못했어요<small>선생님 암호로 들어왔는지 확인해 주세요</small>');}}
+function renderAdmin(){watchBans();renderBans();const on=ADMIN_ON;$('#adminState').textContent=on?'✅ 선생님으로 들어왔어요 · 설정의 \'선생님 화면\'에서 학급을 관리하고, 모든 쪽지와 추천곡을 지울 수 있어요':'';$('#adminOff').hidden=true;$('#adminIn').parentElement.hidden=true;}
 $('#adminGo').addEventListener('click',async()=>{const v=$('#adminIn').value.trim();if(!v)return;const btn=$('#adminGo');btn.disabled=true;btn.textContent='확인 중…';const done=()=>{btn.disabled=false;btn.textContent='켜기';};
   if(DB&&MYID!=='me'){try{await DB.doc('members/'+MYID).set({admin:v});}catch(e){done();toast('저장하지 못했어요<small>연결 상태를 확인해 주세요</small>');return;}
     if(window.__cloudAdmin&&window.__cloudAdmin.verify){await new Promise(r=>setTimeout(r,400));const ok=await window.__cloudAdmin.verify();
@@ -361,14 +361,15 @@ $('#sndTile').addEventListener('click',()=>openSheet('sound'));renderSoundUI();
 /* ---------- start ---------- */
 $('#loadTxt').textContent='';
 function fnv(s){let x=2166136261;for(const ch of String(s)){x^=ch.codePointAt(0);x=Math.imul(x,16777619)>>>0;}return x.toString(16);}
-const PWH='sh:'+fnv((window.CLASS&&CLASS.pw)||'');
-async function sha(s){return 'sh:'+fnv(s);}
+const PWH=(window.CLASS&&CLASS.pwHash)||'-',TWH=(window.CLASS&&CLASS.tHash)||'-';
+async function sha(s){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return '';}}
+function setRole(isT){ADMIN_ON=!!isT;LS.set('adminOn',!!isT);document.body.classList.toggle('teacher',!!isT);try{renderAdmin();renderPlaylist();renderBoard();}catch(e){}}
 const show=id=>['stepPw','stepNick','stepIn'].forEach(s=>$('#'+s).hidden=s!==id);
 async function tryPw(){const v=$('#pwIn').value.trim().toLowerCase().replace(/\s+/g,'');if(!v){$('#pwIn').focus();return;}$('#pwGo').disabled=true;
-  if(await sha(v)!==PWH){$('#pwMsg').textContent='암호가 맞지 않아요. 다시 적어 주세요.';$('#pwGo').disabled=false;$('#pwIn').select();return;}
-  LS.set('pwok',PWH);LS.set('pwk',v);$('#pwMsg').textContent='';$('#pwGo').textContent='문이 열리는 중…';if(window.__cloudJoin)await Promise.race([window.__cloudJoin(v),new Promise(r=>setTimeout(r,5000))]);await afterGate();}
+  const hv=await sha(v);const isT=hv===TWH;if(!isT&&hv!==PWH){$('#pwMsg').textContent='암호가 맞지 않아요. 다시 적어 주세요.';$('#pwGo').disabled=false;$('#pwIn').select();return;}
+  setRole(isT);LS.set('pwok',hv);LS.set('pwk',v);$('#pwMsg').textContent='';$('#pwGo').textContent='문이 열리는 중…';if(window.__cloudJoin)await Promise.race([window.__cloudJoin(v),new Promise(r=>setTimeout(r,5000))]);await afterGate();}
 async function afterGate(){const t0=Date.now();while(MODE==='shared'&&!membersReady&&Date.now()-t0<6000)await new Promise(r=>setTimeout(r,150));if(cloudPending&&Date.now()-t0<4000)await Promise.race([cloudPending,new Promise(r=>setTimeout(r,4000-(Date.now()-t0)))]);while(MODE==='shared'&&!membersReady&&Date.now()-t0<6000)await new Promise(r=>setTimeout(r,150));
-  if(ST.nick&&LS.get('pwok','')===PWH&&afterGate.auto){enter(false);toast(esc(ST.nick)+'님, 어서 오세요 🌙<small>자동으로 들어왔어요 · 소리는 설정에서 켜요</small>');return;}
+  if(ST.nick&&[PWH,TWH].includes(LS.get('pwok',''))&&afterGate.auto){enter(false);toast(esc(ST.nick)+'님, 어서 오세요 🌙<small>자동으로 들어왔어요 · 소리는 설정에서 켜요</small>');return;}
   if(ST.nick){$('#welcome').textContent=ST.nick+'님, 다시 오셨네요!';show('stepIn');}else{renderAvatars();show('stepNick');setTimeout(()=>$('#nickIn').focus(),100);}}
 $('#pwGo').addEventListener('click',tryPw);$('#pwIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing)tryPw();});
 $('#nickGo').addEventListener('click',()=>{const v=$('#nickIn').value.trim().slice(0,12);if(!v){$('#nickMsg').textContent='닉네임을 적어 주세요.';$('#nickIn').focus();return;}ST.nick=v;LS.set('nick',v);if(!ST.avatar){ST.avatar='girl';LS.set('avatar','girl');}saveMember();pushPresence(true);updateMe();$('#welcome').textContent=v+'님, 입학을 환영해요!';$('#welcomeSub').textContent='닉네임은 다음에 와도 그대로예요. 설정에서 바꿀 수 있어요.';show('stepIn');});
@@ -439,7 +440,7 @@ function liftMini(){const mm=$('#mini');if(!mm)return;const r0=mm.getBoundingCli
 setInterval(()=>{if(document.hidden)return;try{drawMini();liftMini();}catch(e){}},120);
 $('#mini').addEventListener('click',()=>openSheet('map'));
 window.__dbg={me,enterSpace,get SP(){return SP;},sitDown,ST,TM};
-if(LS.get('pwok','')===PWH){afterGate.auto=true;$('#stepPw').hidden=true;$('#loadTxt').textContent='자동으로 대문을 여는 중…';afterGate().then(()=>{$('#loadTxt').textContent='';});}
+if([PWH,TWH].includes(LS.get('pwok',''))){afterGate.auto=true;$('#stepPw').hidden=true;$('#loadTxt').textContent='자동으로 대문을 여는 중…';afterGate().then(()=>{$('#loadTxt').textContent='';});}
 
 setInterval(()=>{if(ADMIN_ON)watchBans();if(window.__rulesOld!==window.__rulesShown){window.__rulesShown=window.__rulesOld;updateConn();}},3000);
 $('#banList')&&$('#banList').addEventListener('click',async e=>{const b=e.target.closest('[data-unkick]');if(!b)return;try{await window.__cloudAdmin.unkick(b.dataset.unkick);toast('다시 들어올 수 있어요<small>친구가 암호를 한 번 더 적으면 돼요</small>');}catch(err){toast('바꾸지 못했어요');}});

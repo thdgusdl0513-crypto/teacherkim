@@ -29,7 +29,7 @@ function classStats(){const now=new Date(),tk=dkey(now),mp=tk.slice(0,8);const w
   rows.sort((a,b)=>a.nick.localeCompare(b.nick,'ko'));return rows;}
 const fmtMin=m=>m>=60?`${Math.floor(m/60)}시간 ${m%60}분`:`${m}분`;
 let tSort='name';
-function renderTeacher(keepForm){const el=$('#tBody');if(!el)return;if(!ADMIN_ON){el.innerHTML='<div class="empty">설정 → 연결에서 선생님 코드를 넣으면 볼 수 있어요.</div>';return;}
+function renderTeacher(keepForm){const el=$('#tBody');if(!el)return;if(!ADMIN_ON){el.innerHTML='<div class="empty">선생님 암호로 들어오면 볼 수 있어요.</div>';return;}
   let R=classStats().filter(r=>!r.me);if(tSort==='att')R.sort((a,b)=>b.mDays-a.mDays);else if(tSort==='study')R.sort((a,b)=>b.wMin-a.wMin);
   const todayN=R.filter(r=>r.today).length,wSum=R.reduce((a,r)=>a+r.wMin,0);
   $('#tSum').innerHTML=`<div><small>학생</small><b>${R.length}</b>명</div><div><small>오늘 출석</small><b>${todayN}</b>명</div><div><small>이번 주 공부</small><b>${Math.round(wSum/60)}</b>시간</div>`;
@@ -56,4 +56,4 @@ document.addEventListener('DOMContentLoaded',()=>{});
     const rooms={};$$('#tRooms [data-room]').forEach(i=>{const v=i.value.trim().slice(0,14);if(v)rooms[i.dataset.room]=v;});
     const boards={};$$('#tBoards [data-bd]').forEach(i=>{const v=i.value.trim().slice(0,40);if(v){(boards[i.dataset.bd]=boards[i.dataset.bd]||{})[i.dataset.bi]=v;}});
     const v={boards,rooms,chat:$('#tChat').value,ch:[+$('#tCh0').value,+$('#tCh1').value],lock:$('#tLock').value,lk:[+$('#tLk0').value,+$('#tLk1').value],ts:Date.now()};
-    try{await DB.doc('settings/class').set(v);toast('학급 설정을 저장했어요<small>학생들 화면에도 바로 바뀌어요</small>');}catch(e){toast('저장하지 못했어요<small>선생님 코드가 맞는지 확인해 주세요</small>');}});})();
+    try{await DB.doc('settings/class').set(v);toast('학급 설정을 저장했어요<small>학생들 화면에도 바로 바뀌어요</small>');}catch(e){toast('저장하지 못했어요<small>선생님 암호로 들어왔는지 확인해 주세요</small>');}});})();
