@@ -32,8 +32,8 @@ let tSort='name';
 function renderTeacher(keepForm){const el=$('#tBody');if(!el)return;if(!ADMIN_ON){el.innerHTML='<div class="empty">선생님 암호로 들어오면 볼 수 있어요.</div>';return;}
   let R=classStats().filter(r=>!r.me);if(tSort==='att')R.sort((a,b)=>b.mDays-a.mDays);else if(tSort==='study')R.sort((a,b)=>b.wMin-a.wMin);
   const todayN=R.filter(r=>r.today).length,wSum=R.reduce((a,r)=>a+r.wMin,0);
-  $('#tSum').innerHTML=`<div><small>학생</small><b>${R.length}</b>명</div><div><small>오늘 출석</small><b>${todayN}</b>명</div><div><small>이번 주 공부</small><b>${Math.round(wSum/60)}</b>시간</div>`;
-  el.innerHTML=R.length?R.map(r=>`<div class="tRow"><div class="tName"><b>${esc(r.nick)}</b><span class="${r.today?'ok':'no'}">${r.today?'오늘 출석':'미출석'}</span></div>${r.memo?`<div class="tMemo">“${esc(r.memo)}”</div>`:''}
+  $('#tSum').innerHTML=`<div><small>간식 대상</small><b>${R.filter(r=>snackOK(r.id).ok&&!SNACKV[r.id]).length}</b>명</div><div><small>학생</small><b>${R.length}</b>명</div><div><small>오늘 출석</small><b>${todayN}</b>명</div><div><small>이번 주 공부</small><b>${Math.round(wSum/60)}</b>시간</div>`;
+  el.innerHTML=R.length?R.map(r=>`<div class="tRow"><div class="tName"><b>${esc(r.nick)}</b><span class="${r.today?'ok':'no'}">${r.today?'오늘 출석':'미출석'}</span>${(()=>{const k=snackOK(r.id);return k.ok?`<button class="tSnack ${k.given?'done':''}" data-tsnack="${r.id}">${k.given?'🍪 간식 줬어요 ✓':'🍪 간식 대상 · 줬으면 눌러요'}</button>`:`<small class="tSm">🍪 도장 ${Math.min(3,k.st)}/3 · 1시간 공부 ${Math.min(3,k.sd)}/3일</small>`;})()}<button class="tRs" data-treset="${r.id}" title="이 학생 초기화">🧹</button></div>${r.memo?`<div class="tMemo">“${esc(r.memo)}”</div>`:''}
     <div class="tNums"><span>출석 <b>${r.mDays}</b>일<small>이번 달</small></span><span><b>${fmtMin(r.wMin)}</b><small>이번 주 공부</small></span><span><b>${fmtMin(r.aMin)}</b><small>누적 공부</small></span><span><b>${r.books}</b>편<small>독후감</small></span></div>
     <div class="tLast">${r.last?'마지막 활동 '+ago(r.last):'아직 활동 없음'}</div></div>`).join(''):'<div class="empty">아직 들어온 학생이 없어요. 학생들에게 링크와 암호를 알려 주세요.</div>';
   if(!keepForm||!$('#tForm').dataset.ready)fillTeacherForm();}
@@ -57,3 +57,31 @@ document.addEventListener('DOMContentLoaded',()=>{});
     const boards={};$$('#tBoards [data-bd]').forEach(i=>{const v=i.value.trim().slice(0,40);if(v){(boards[i.dataset.bd]=boards[i.dataset.bd]||{})[i.dataset.bi]=v;}});
     const v={boards,rooms,chat:$('#tChat').value,ch:[+$('#tCh0').value,+$('#tCh1').value],lock:$('#tLock').value,lk:[+$('#tLk0').value,+$('#tLk1').value],ts:Date.now()};
     try{await DB.doc('settings/class').set(v);toast('학급 설정을 저장했어요<small>학생들 화면에도 바로 바뀌어요</small>');}catch(e){toast('저장하지 못했어요<small>선생님 암호로 들어왔는지 확인해 주세요</small>');}});})();
+
+/* ---------- 간식 미션 · 학생 초기화 ---------- */
+let RESETV={},SNACKV={};let rsSub=false;
+function snackOK(id){const days=id===MYID?myDays:((STAMPS[id]&&STAMPS[id].days)||{});const st=Object.keys(days||{}).length;const per={};(DATA.logs||[]).filter(l=>l.by===id).forEach(l=>{const k=dkey(new Date(l.ts||0));per[k]=(per[k]||0)+(+l.sec||0);});const sd=Object.values(per).filter(v=>v>=3600).length;return {ok:st>=3&&sd>=3,st,sd,given:!!SNACKV[id]};}
+function renderSnack(){const el=document.getElementById('snackBox');if(!el)return;if(ADMIN_ON){el.innerHTML='';return;}const r=snackOK(MYID);
+  el.innerHTML=r.ok?(r.given?`<div class="snack" style="animation:none">🍪 간식을 받았어요! 계속 꾸준히 해 봐요 💪</div>`:`<div class="snack">🍪 교무실로 와서 송현쌤께 간식을 받아가세요</div>`)
+    :`<div class="ms"><span class="msI">🍪</span><div class="msM"><b>간식 미션</b><small>도장 3개 · 1시간 넘게 공부한 날 3일을 채우면 간식을 받아요</small><i class="msBar"><u style="width:${Math.round((Math.min(3,r.st)+Math.min(3,r.sd))/6*100)}%"></u></i></div><em>도장 ${Math.min(3,r.st)}/3<br>공부 ${Math.min(3,r.sd)}/3</em></div>`;}
+{const _rs=renderStamp;renderStamp=function(){_rs.apply(this,arguments);try{renderSnack();}catch(e){}};}
+function snackPop(){if(ADMIN_ON||!window.__entered)return;const r=snackOK(MYID);if(!r.ok||r.given)return;const k=dkey(new Date());if(LS.get('snackShown','')===k)return;LS.set('snackShown',k);
+  let el=document.createElement('div');el.id='giftPop';el.innerHTML=`<div class="gpBox paper"><div class="gpConf">${'🍪🎉✨🍬'.repeat(3).split('').filter(c=>c.trim()).map((c,i)=>`<i style="left:${(i*37)%100}%;animation-delay:${(i%6)*.12}s">${c}</i>`).join('')}</div><div class="gpT">🍪 간식 미션 성공!</div><div class="snack" style="animation:none">교무실로 와서 송현쌤께 간식을 받아가세요</div><div class="gpB"><button class="primary" id="gpClose">알겠어요!</button></div></div>`;
+  document.body.appendChild(el);try{chime();}catch(e){}el.addEventListener('click',e=>{if(e.target===el||e.target.closest('#gpClose'))el.remove();});}
+setInterval(snackPop,15000);
+function wipeLocal(t){const keep=['resetSeen','prologue','adminOn'];const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('songhyeon.')&&!keep.includes(k.slice(10)))ks.push(k);}ks.forEach(k=>localStorage.removeItem(k));LS.set('resetSeen',t);}
+function checkReset(){const t=Math.max(+RESETV.all||0,+RESETV['u_'+MYID]||0);if(!t)return;const seen=+LS.get('resetSeen',0);if(t<=seen)return;
+  if(ADMIN_ON||LS.get('adminOn',false)){LS.set('resetSeen',t);return;}if(!LS.get('nick','')){LS.set('resetSeen',t);return;}
+  wipeLocal(t);toast('🧹 선생님이 학당 기록을 새로 시작했어요<small>잠시 뒤 처음 화면으로 돌아가요</small>');setTimeout(()=>location.reload(),1800);}
+setInterval(()=>{if(!rsSub&&typeof DB!=='undefined'&&DB&&MODE==='shared'){rsSub=true;
+  DB.doc('settings/reset').onSnapshot(d=>{RESETV=(d&&d.exists&&d.data())||{};checkReset();},()=>{});
+  DB.doc('settings/snack').onSnapshot(d=>{SNACKV=(d&&d.exists&&d.data())||{};try{renderSnack();renderTeacher(true);}catch(e){}},()=>{});}},1500);
+async function resetStudents(ids,all){if(!DB||MODE!=='shared'){toast('학당이 연결돼 있어야 초기화할 수 있어요');return;}const S=new Set(ids);let n=0,fail=0;
+  for(const col of ['logs','books','quotes','board','playlist']){for(const d of (DATA[col]||[]).filter(x=>S.has(x.by))){try{await DB.collection(col).doc(d.id).delete();n++;}catch(e){fail++;}}}
+  for(const id of ids){try{await DB.doc('stamps/'+id).delete();}catch(e){fail++;}try{await DB.doc('members/'+id).delete();}catch(e){fail++;}delete MEMBERS[id];delete STAMPS[id];}
+  try{const now=Date.now();if(all)await DB.doc('settings/reset').set({all:now});else{const o={};ids.forEach(id=>o['u_'+id]=now);await DB.doc('settings/reset').set(o);}const so={};ids.forEach(id=>so[id]=null);}catch(e){fail++;}
+  toast(fail?`일부를 지우지 못했어요 (${fail}건)<small>Firebase 규칙을 새로 붙여 넣었는지 확인해 주세요</small>`:`🧹 ${ids.length}명을 초기화했어요<small>학생 화면은 처음 화면으로 돌아가요</small>`);renderTeacher(true);}
+(function(){const bar=document.getElementById('tCsv');if(!bar)return;const b=document.createElement('button');b.className='ghost';b.id='tResetAll';b.textContent='🧹 전체 초기화';bar.after(b);
+  b.addEventListener('click',()=>{if(!ADMIN_ON)return;const ids=classStats().filter(r=>!r.me).map(r=>r.id);if(!ids.length){toast('초기화할 학생이 없어요');return;}const v=prompt(`학생 ${ids.length}명의 출석·공부 기록·독후감·문장·캐릭터를 모두 지워요.\n되돌릴 수 없어요. 계속하려면 "초기화"라고 적어 주세요.`);if(v&&v.trim()==='초기화')resetStudents(ids,true);});
+  document.getElementById('tBody').addEventListener('click',async e=>{const r=e.target.closest('[data-treset]');if(r){const id=r.dataset.treset;if(confirm(`${nameOf(id)} 학생의 기록을 모두 지우고 처음부터 시작하게 할까요?`))resetStudents([id],false);return;}
+    const g=e.target.closest('[data-tsnack]');if(g){const id=g.dataset.tsnack;try{await DB.doc('settings/snack').set({[id]:SNACKV[id]?null:Date.now()});}catch(err){toast('저장하지 못했어요');}}});})();
