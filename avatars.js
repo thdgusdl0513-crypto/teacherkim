@@ -448,13 +448,28 @@ function sdShirtTexture(cfg){
   tex.repeat.set(1,1);tex.needsUpdate=true;
   SD_SHIRT_CACHE[key]=tex;return tex;
 }
+// Single source of truth: body and clothes share these same cross-sections.
+const SD_PEAR_PROFILE=[
+  [0,0],[.11,.015],[.245,.075],[.31,.18],[.342,.32],[.35,.43],
+  [.321,.60],[.27,.73],[.20,.82],[.12,.86],[0,.88]
+];
+function sdPearRadiusAt(y){
+  const P=SD_PEAR_PROFILE, yy=Math.max(P[0][1],Math.min(P[P.length-1][1],y));
+  for(let i=1;i<P.length;i++)if(yy<=P[i][1]){
+    const a=P[i-1],b=P[i],t=(yy-a[1])/(b[1]-a[1]);
+    return a[0]+t*(b[0]-a[0]);
+  }
+  return 0;
+}
 function sdPear(p,mat,location,scale){
-  const points=[
-    [0,0],[.11,.015],[.245,.075],[.31,.18],[.342,.32],[.35,.43],
-    [.321,.60],[.27,.73],[.20,.82],[.12,.86],[0,.88]
-  ].map(q=>new THREE.Vector2(q[0],q[1]));
-  const mesh=new THREE.Mesh(new THREE.LatheGeometry(points,32),mat);
+  const points=SD_PEAR_PROFILE.map(q=>new THREE.Vector2(q[0],q[1]));
+  const mesh=new THREE.Mesh(new THREE.LatheGeometry(points,40),mat);
   mesh.position.set(...location);mesh.scale.set(...scale);p.add(mesh);return mesh;
+}
+function sdGarmentEdge(parent,mat,radiusX,radiusZ,y,z,name){
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(radiusX,.014,8,48),mat);
+  ring.rotation.x=PI/2;ring.scale.y=radiusZ/radiusX;
+  ring.position.set(0,y,z);ring.name=name;parent.add(ring);return ring;
 }
 function sdLathePart(p,points,mat,x=0,y=0,z=0,sx=1,sy=1,sz=1,rx=0,ry=0,rz=0){
   const geom=new THREE.LatheGeometry(points.map(q=>new THREE.Vector2(q[0],q[1])),26);
@@ -508,38 +523,111 @@ function buildSDBase(A,cfg,look){
   const chosen=(cfg.dragonColor||cfg.type==='dino')?lookPick(look,'av',skinBase):skinBase;
   const skin=sdMat(sdSoftColor(chosen,.11));
   const body=new THREE.Group();body.name='body';B.add(body);
-  const core=sdPear(body,skin,[0,.38,.015],[profile.bodyWidth,profile.bodyHeight,1.02]);
-  const shirtMat=sdMat(0xffffff,{map:sdShirtTexture(cfg),side:THREE.DoubleSide,emissive:new THREE.Color(0xfff5ea),emissiveIntensity:.16});
-  const shirt=sdLathePart(body,
-    [[0,0],[.145,.03],[.26,.10],[.325,.23],[.34,.38],[.328,.56],[.28,.73],[.2,.84],[.1,.89],[0,.90]],
-    shirtMat,0,.40,-.01,profile.bodyWidth*1.04,profile.bodyHeight*.82,1.05);
-  shirt.name='defaultShirt';A.garb.push(shirt);
-  const hem=sdCollarRing(body,shirtMat,0,.46,.01,.39*profile.bodyWidth,.08,.27);hem.name='hem';A.garb.push(hem);
-  const collar=sdCollarRing(body,shirtMat,0,1.08,-.11,.23,.07,.19);A.garb.push(collar);
+  const baseY=.38,bodyH=profile.bodyHeight,core=sdPear(body,skin,[0,baseY,.015],[profile.bodyWidth,bodyH,1.02]);
+  core.name='bodySkin';
+  // The top is not an arbitrary constant: it comes from the same lathe cross-section.
+  const bodyTopY=baseY+SD_PEAR_PROFILE[SD_PEAR_PROFILE.length-1][1]*bodyH;
+  const shirtMat=sdMat(0xffffff,{map:sdShirtTexture(cfg),side:THREE.DoubleSide,
+    emissive:new THREE.Color(0xfff5ea),emissiveIntensity:.16});
+  // Matching lathe from shoulder line to upper hip. Every radial sample is >=1.10x skin.
+  // Equal surfaces, copied offsets and a floating center-belly belt are prohibited.
+  const shirtY0=.15,shirtY1=.79,shirtPoints=[];
+  for(let i=0;i<=40;i++){
+    const y=shirtY0+(shirtY1-shirtY0)*i/40;
+    shirtPoints.push([sdPearRadiusAt(y)*1.10,y]);
+  }
+  const shirt=new THREE.Mesh(new THREE.LatheGeometry(
+    shirtPoints.map(q=>new THREE.Vector2(q[0],q[1])),40),shirtMat);
+  shirt.name='defaultShirt';shirt.position.set(0,baseY,.015);
+  shirt.scale.set(profile.bodyWidth,bodyH,1.02*1.10);body.add(shirt);A.garb.push(shirt);
+  // Thin knitted hems at the *actual* shirt openings, never across the stomach.
+  const edgeMat=sdMat(0xf5e9d8,{emissiveIntensity:.14});
+  const edge=(y,name)=>{
+    const rad=sdPearRadiusAt(y)*1.10*profile.bodyWidth;
+    const rZ=sdPearRadiusAt(y)*1.10*1.02;
+    const rim=sdGarmentEdge(body,edgeMat,rad+.006,rZ+.006,baseY+y*bodyH,.015,name);
+    A.garb.push(rim);
+  };
+  edge(shirtY0,'shirtHem');edge(shirtY1,'shirtCollar');
   const arms=[],legs=[];
   for(const s of [-1,1]){
-    const arm=new THREE.Group();arm.name=s<0?'leftArm':'rightArm';arm.position.set(s*profile.armX,profile.armY,profile.armZ);arm.rotation.z=-s*profile.armRot;B.add(arm);
-    sdLathePart(arm,[[0,0],[.055,.015],[.095,.09],[.11,.23],[.105,.40],[.084,.54],[.05,.62],[0,.66]],skin,s*.015,-.14,-.01,.92,1.02,1.0,0,0,s*.06);
-    sdLathePart(arm,[[0,0],[.05,.015],[.09,.09],[.10,.20],[.095,.31],[.07,.42],[.042,.50],[0,.53]],skin,s*.045,-.34,-.03,.92,.96,.98,0,0,s*.12);
-    const paw=sdFootShape(arm,skin,s*.06,-.43,-.10,s);paw.scale.set(1.0,.72,1.08);
-    const sleeve=sdLathePart(arm,[[0,0],[.065,.015],[.108,.08],[.116,.16],[.108,.24],[.078,.30],[.04,.34],[0,.35]],shirtMat,s*.01,-.11,-.002,1.0,.84,1.01,0,0,s*.04);sleeve.name='sleeve';A.sleeves.push(sleeve);
-    A.arms.push({g:arm,s,ph:s>0?0:PI,wing:false,restZ:.31});arms.push(arm);
+    // Shoulder pivot and upper arm are inside the pear torso, and no arm geometry
+    // can rise into the jaw: all arm stations are y<=0 in shoulder coordinates.
+    const shoulderY=bodyTopY-.22;
+    const yInPear=(shoulderY-baseY)/bodyH;
+    const shoulderR=sdPearRadiusAt(yInPear)*profile.bodyWidth;
+    const arm=new THREE.Group();arm.name=s<0?'leftArm':'rightArm';
+    arm.position.set(s*shoulderR*.94,shoulderY,-.015);arm.rotation.z=s*.30;B.add(arm);
+    const armOutline=[[0,0],[.080,-.015],[.125,-.09],[.135,-.18],
+      [.130,-.30],[.122,-.40],[.125,-.47],[.100,-.54],[.060,-.565],[0,-.58]];
+    const limb=sdLathePart(arm,armOutline.reverse(),skin,0,0,0,.97,1,.97);
+    limb.name='feltArmAndHand';  // a continuous taper, NOT a separate glove sphere
+    const sleeveOutline=[[0,0],[.09,-.015],[.145,-.085],[.148,-.17],
+      [.145,-.24],[.140,-.285]];
+    const sleeve=sdLathePart(arm,sleeveOutline.reverse(),shirtMat,0,.002,0,1,1,1);
+    sleeve.name='sleeve';A.sleeves.push(sleeve);
+    A.arms.push({g:arm,s,ph:s>0?0:PI,wing:false,restZ:.30});arms.push(arm);
     const leg=new THREE.Group();leg.name=s<0?'leftLeg':'rightLeg';leg.position.set(s*profile.legX,profile.legY,.01);B.add(leg);
-    sdLathePart(leg,[[0,0],[.07,.015],[.11,.08],[.122,.21],[.116,.36],[.09,.48],[.055,.58],[0,.61]],skin,0,-.15,-.01,.92,1.05,1.0);
+    sdLathePart(leg,[[0,-.43],[.065,-.43],[.13,-.37],[.145,-.30],
+      [.128,-.19],[.120,-.10],[.09,-.035],[0,0]],skin,0,0,-.01,.92,1.0,1.0);
     const foot=sdFootShape(leg,skin,0,-.34,-.11,s);foot.scale.set(1.10,.82,1.32);
     A.legs.push({g:leg,s,ph:s>0?PI:0});legs.push(leg);
   }
-  const head=new THREE.Group();head.name='head';head.position.set(0,1.53+profile.headLift,-.055+profile.headZ);B.add(head);A.head=head;
-  const r=profile.headR;
+  const head=new THREE.Group();head.name='head';B.add(head);A.head=head;
+  const r=profile.headR,halfY=r*profile.headScale[1];
+  head.position.set(0,bodyTopY+halfY-.075,-.055+profile.headZ);
   const hm=sdBall(head,r,skin,0,0,0,...profile.headScale);hm.name='headSkin';
   A.headR=r;A.headS=profile.headScale.slice();
   const tail=new THREE.Group();tail.name='tail';tail.position.set(0,profile.tailY,profile.tailZ);B.add(tail);A.tail=tail;
   A.parts={body,head,leftArm:arms[0],rightArm:arms[1],leftLeg:legs[0],rightLeg:legs[1],tail};
-  A.fit={y0:.43,y1:1.17,r0:.36*profile.bodyWidth,r1:.22,neck:1.23,
-    legTop:.40,legLen:.26,legR:.13,sleeve:[.13,1.22,-.13],human:cfg.type==='human'};
+  // Custom outfit radius uses a generous envelope of the pear: avoids tube clipping.
+  A.fit={y0:baseY+shirtY0*bodyH,y1:baseY+shirtY1*bodyH,
+    r0:.43*profile.bodyWidth,r1:.38*profile.bodyWidth,neck:bodyTopY-.07,
+    legTop:profile.legY,legLen:.26,legR:.13,sleeve:[.13,1.02,-.15],
+    human:cfg.type==='human'};
   A.h=2.12+profile.headLift;A.waddle=.045;A.headRadius=r;
-  A.sd={skin,skinColor:chosen,base:core,shirt,shirtMat,profile};
+  A.sd={skin,skinColor:chosen,base:core,shirt,shirtMat,profile,bodyTopY,
+    shirtMinRadialRatio:1.10,armMinY:-.58,armMaxY:0};
   return A;
+}
+function sdReconcileRig(A,cfg){
+  const body=A.parts.body,profile=A.sd.profile;
+  const bodyTopY=body.scale.y*(.38+.88*profile.bodyHeight);
+  const headSkin=A.head.children.find(x=>x.name==='headSkin');
+  const headHalfY=A.headR*(headSkin?headSkin.scale.y:profile.headScale[1])*A.head.scale.y;
+  const longNeck=cfg.species==='brachio'||!!cfg.crane;
+  // Normal characters: strictly 0.075 overlap between head bottom and body top.
+  // Long-neck species retain their silhouette, but receive a continuous felt bridge.
+  if(!longNeck)A.head.position.y=bodyTopY+headHalfY-.075;
+  const headBottomY=A.head.position.y-headHalfY;
+  if(longNeck&&headBottomY>bodyTopY-.075){
+    const start=bodyTopY-.10,end=headBottomY+.12,z1=A.head.position.z;
+    sdTube(A.bob,[[0,start,.015],[0,start+(end-start)*.35,z1*.33],
+      [0,start+(end-start)*.72,z1*.72],[0,end,z1]],cfg.crane?.11:.15,A.sd.skin);
+  }
+  // Use the measured pear cross-section at the real shoulder height.
+  const shoulderY=bodyTopY-.22;
+  const bodyLocalY=shoulderY/body.scale.y;
+  const r=sdPearRadiusAt((bodyLocalY-.38)/profile.bodyHeight)*profile.bodyWidth*body.scale.x;
+  A.arms.forEach(a=>{
+    // Deliberate dinosaur mini-arms keep their species-specific scale; only pivot moves.
+    a.g.position.y=shoulderY;
+    a.g.position.x=a.s*r*.94;
+    a.g.rotation.z=a.s*(a.restZ||.30);
+  });
+  const lo=body.scale.y*(.38+.15*profile.bodyHeight),
+        hi=body.scale.y*(.38+.79*profile.bodyHeight);
+  A.fit.y0=lo;A.fit.y1=hi;
+  A.fit.r0=.43*profile.bodyWidth*body.scale.x;
+  A.fit.r1=.38*profile.bodyWidth*body.scale.x;
+  A.fit.neck=bodyTopY-.07;
+  A.fit.legTop=profile.legY;
+  A.fit.sleeve=[.13,1.02,-.15];
+  A.sd.bodyTopY=bodyTopY;
+  A.sd.rigMetrics={bodyTopY,headBottomY,headOverlap:bodyTopY-headBottomY,
+    shoulderY,shoulderOffset:bodyTopY-shoulderY,shirtMinRadialRatio:1.10,
+    handWidth:.125*.97,shirtBottomY:lo,shirtTopY:hi,longNeck,
+    bridgeInstalled:longNeck&&headBottomY>bodyTopY-.075};
 }
 /* CanvasTexture-only eyes/nose/mouth: no 3D face spheres or nostril dots. */
 
@@ -729,6 +817,15 @@ function sdTuneAnchors(A,cfg){
     else A.gat.visible=false;
   }
   if(A.book){A.book.position.y=A.bookY=cfg.crane?.82:(cfg.type==='bird'||cfg.type==='dino'||cfg.sp==='dragon')?.86:.91;}
+  // Species adjustments must not reinstate old tight clothing radii / clipping.
+  if(A.sd&&A.sd.rigMetrics){
+    const M=A.sd.rigMetrics,P=A.sd.profile,body=A.parts.body;
+    A.fit.y0=M.shirtBottomY;A.fit.y1=M.shirtTopY;
+    A.fit.r0=.43*P.bodyWidth*body.scale.x;
+    A.fit.r1=.38*P.bodyWidth*body.scale.x;
+    A.fit.neck=M.bodyTopY-.07;
+    A.fit.sleeve=[.13,1.02,-.15];
+  }
 }
 function sdBuildHuman(A,cfg,col){
   const hair=sdMat(cfg.fem?0x49352e:0x70503a);
@@ -908,6 +1005,7 @@ function makeAvatar(id,look){
   sh.rotation.x=-PI/2;sh.position.y=.03;sh.name='shadow';A.root.add(sh);
   buildSDBase(A,cfg,look||null);           // phase 1 - shared silhouette and rig
   sdBuildSpecies(A,cfg,look||null);         // phase 2 - species silhouettes
+  sdReconcileRig(A,cfg);                   // joints, neck gap and outfit envelope
   attachSDFace(A,cfg);                    // phase 1 - all facial features are texture only
   // Keep hats, bag, and book anchors used in wardrobe/emotes.
   A.gat=makeGat(A.head,A.headR*.99,.8,-.10);
