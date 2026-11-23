@@ -23,3 +23,11 @@
 - 학당 입장 시간: 밤에 문 닫기
 - 친구 부르기 창에서 학생 내보내기 (잠깐 내보내는 것이라 학생은 다시 들어올 수 있어요)
 선생님은 채팅·입장 제한을 받지 않아요.
+
+
+## SD 캐릭터 2단계 리팩토링 (2026-11-23)
+- `avatars.js`는 1단계 공통 베이스(`buildSDBase`, `createSDFaceTexture`, `attachSDFace`)와 2단계 종족별 파츠(`sdBuildSpecies`)로 구성됩니다.
+- 기존 28종 ID, `makeAvatar` / `animateAvatar` / `faceTick` 및 `A.head`, `A.arms`, `A.legs`, `A.fit`, `A.garb`를 유지합니다.
+- `pets.js`의 썸네일 캐시 키는 공룡 색상 변경도 반영합니다.
+- 기존 화분 가꾸기, 미니게임, Firebase 설정을 삭제하지 않았습니다.
+- 체크: 문법, 28종 모델 생성과 표정·의상 호출을 모의 3D 환경에서 확인했습니다. 실제 모바일 WebGL 외형은 배포 전 확인이 필요합니다.
