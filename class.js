@@ -1,5 +1,5 @@
 /* 송현학당 · 학급 기능: 선생님 화면(출석·공부 시간), 강의실 이름, 채팅 시간, 입장 시간 */
-const CLS_DEF={boards:{},rooms:{},chat:'on',ch:[8,22],lock:'off',lk:[23,6]};
+const CLS_DEF={rsv:'',boards:{},rooms:{},chat:'on',ch:[8,22],lock:'off',lk:[23,6]};
 let CLS=JSON.parse(JSON.stringify(CLS_DEF)),clsSub=false;
 const RKEYS=[['basics','강의실 1'],['potion','강의실 2'],['herbs','강의실 3'],['training','강의실 4'],['library','도서관'],['dorm','기숙사']];
 const hh=h=>`${h}시`;
@@ -43,7 +43,7 @@ function fillTeacherForm(){const f=$('#tForm');f.dataset.ready='1';
   $('#tRooms').innerHTML=RKEYS.map(([k,lb])=>`<label class="tIn"><span>${lb}</span><input data-room="${k}" maxlength="14" placeholder="${esc(ROOM_DEF[k].name)}" value="${esc((CLS.rooms||{})[k]||'')}"></label>`).join('');
   const hrs=sel=>Array.from({length:24},(_,h)=>`<option value="${h}">${h}시</option>`).join('');
   $('#tChat').value=CLS.chat;$('#tCh0').innerHTML=$('#tCh1').innerHTML=$('#tLk0').innerHTML=$('#tLk1').innerHTML=hrs();
-  $('#tCh0').value=CLS.ch[0];$('#tCh1').value=CLS.ch[1];$('#tLock').value=CLS.lock;$('#tLk0').value=CLS.lk[0];$('#tLk1').value=CLS.lk[1];tVis();}
+  $('#tRsv').value=CLS.rsv||'';$('#tCh0').value=CLS.ch[0];$('#tCh1').value=CLS.ch[1];$('#tLock').value=CLS.lock;$('#tLk0').value=CLS.lk[0];$('#tLk1').value=CLS.lk[1];tVis();}
 function tVis(){$('#tChH').hidden=$('#tChat').value!=='hours';$('#tLkH').hidden=$('#tLock').value!=='on';}
 function csvExport(){const R=classStats().filter(r=>!r.me);const head=['닉네임','오늘 출석','이번 달 출석일','누적 출석일','이번 주 공부(분)','이번 달 공부(분)','누적 공부(분)','독후감 수','마지막 활동'];
   const q=v=>`"${String(v).replace(/"/g,'""')}"`;const lines=[head.map(q).join(',')].concat(R.map(r=>[r.nick,r.today?'O':'',r.mDays,r.aDays,r.wMin,r.mMin,r.aMin,r.books,r.last?new Date(r.last).toLocaleString('ko-KR'):''].map(q).join(',')));
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded',()=>{});
   $('#tSave').addEventListener('click',async()=>{if(!DB||MODE!=='shared'){toast('학당이 연결돼 있어야 저장할 수 있어요');return;}
     const rooms={};$$('#tRooms [data-room]').forEach(i=>{const v=i.value.trim().slice(0,14);if(v)rooms[i.dataset.room]=v;});
     const boards={};$$('#tBoards [data-bd]').forEach(i=>{const v=i.value.trim().slice(0,40);if(v){(boards[i.dataset.bd]=boards[i.dataset.bd]||{})[i.dataset.bi]=v;}});
-    const v={boards,rooms,chat:$('#tChat').value,ch:[+$('#tCh0').value,+$('#tCh1').value],lock:$('#tLock').value,lk:[+$('#tLk0').value,+$('#tLk1').value],ts:Date.now()};
+    const v={boards,rooms,chat:$('#tChat').value,ch:[+$('#tCh0').value,+$('#tCh1').value],lock:$('#tLock').value,lk:[+$('#tLk0').value,+$('#tLk1').value],rsv:rsvClean($('#tRsv').value),ts:Date.now()};if($('#tRsv').value.trim()&&!v.rsv){toast('상담 링크는 https:// 로 시작해야 해요');return;}
     try{await DB.doc('settings/class').set(v);toast('학급 설정을 저장했어요<small>학생들 화면에도 바로 바뀌어요</small>');}catch(e){toast('저장하지 못했어요<small>선생님 암호로 들어왔는지 확인해 주세요</small>');}});})();
 
 /* ---------- 간식 미션 · 학생 초기화 ---------- */
@@ -85,3 +85,15 @@ async function resetStudents(ids,all){if(!DB||MODE!=='shared'){toast('학당이 
   b.addEventListener('click',()=>{if(!ADMIN_ON)return;const ids=classStats().filter(r=>!r.me).map(r=>r.id);if(!ids.length){toast('초기화할 학생이 없어요');return;}const v=prompt(`학생 ${ids.length}명의 출석·공부 기록·독후감·문장·캐릭터를 모두 지워요.\n되돌릴 수 없어요. 계속하려면 "초기화"라고 적어 주세요.`);if(v&&v.trim()==='초기화')resetStudents(ids,true);});
   document.getElementById('tBody').addEventListener('click',async e=>{const r=e.target.closest('[data-treset]');if(r){const id=r.dataset.treset;if(confirm(`${nameOf(id)} 학생의 기록을 모두 지우고 처음부터 시작하게 할까요?`))resetStudents([id],false);return;}
     const g=e.target.closest('[data-tsnack]');if(g){const id=g.dataset.tsnack;try{await DB.doc('settings/snack').set({[id]:SNACKV[id]?null:Date.now()});}catch(err){toast('저장하지 못했어요');}}});})();
+
+/* ---------- 💬 상담 신청 (교무실 프로그램 상담 신청 페이지와 연결) ---------- */
+function rsvClean(u){u=String(u||'').trim();return /^https:\/\/[^\s"'<>]+$/.test(u)?u.slice(0,1500):'';}
+function renderCounsel(){const el=$('#csBody');if(!el)return;const u=rsvClean(CLS.rsv);
+  if(!u){el.innerHTML=`<div class="empty" style="padding:26px 6px">🙂 선생님이 아직 상담 신청을 열지 않았어요.<br><small>급한 이야기는 교무실로 오거나 선생님께 바로 말해 주세요.</small></div>${ADMIN_ON?'<div class="empty">선생님: 선생님 화면 맨 아래 ‘💬 상담 신청 연결’에 학생용 링크를 붙여 넣어 주세요.</div>':''}`;return;}
+  if(el.dataset.u===u&&el.querySelector('#csFrame'))return;el.dataset.u=u;
+  el.innerHTML=`<div class="csIntro">편하게 신청해요. 무슨 이야기든 괜찮아요 🌱<br><small>신청하면 선생님이 확인하고 시간을 정해 줄게요.</small></div>
+  <div class="csSteps"><span><b>①</b>학번·이름</span><span><b>②</b>시간 고르기</span><span><b>③</b>신청 누르기</span></div>
+  <iframe id="csFrame" src="${esc(u)}" referrerpolicy="no-referrer" allow="clipboard-write"></iframe>
+  <a class="ghost csOut" href="${esc(u)}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none;padding:10px;border-radius:12px">↗ 화면이 안 보이면 새 창으로 열기</a>`;}
+(function(){const tile=$('#csTile');if(tile)tile.addEventListener('click',()=>setTimeout(renderCounsel,0));
+  setInterval(()=>{const m=$('#counsel');if(m&&m.classList.contains('show'))renderCounsel();},1500);})();

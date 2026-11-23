@@ -237,6 +237,9 @@ body.seated #hint,body.seated #action{display:none!important}
 #intro:has(#stepNick:not([hidden])) .ichips{display:none}
 #shop .sheet,#shop button,#shop b,#shop small,#shop .sh span{font-family:'Orbit',sans-serif!important;letter-spacing:-.01em}.snk b{font-size:14.5px;font-weight:400}.shopCoin b{font-weight:400}
 #intro .card.paper{color:#3a2a1e}#intro .card.paper h3,#intro .card.paper label,#intro .card.paper .msg{color:#3a2a1e}
+#csBody .csIntro{font-size:14px;line-height:1.55;margin:4px 0 10px;color:var(--ink2)}#csFrame{width:100%;height:min(70vh,640px);border:0;border-radius:14px;background:#fff;display:block}
+#csBody .csSteps{display:flex;gap:6px;margin:0 0 10px}#csBody .csSteps span{flex:1;text-align:center;font-size:12px;background:rgba(255,255,255,.6);border-radius:10px;padding:6px 2px;line-height:1.35}#csBody .csSteps b{display:block;font-size:18px}
+#csBody .csOut{display:block;width:100%;margin-top:10px}#counsel .sheet{max-height:94vh}
 </style>
 </head>
 <body>
@@ -274,6 +277,7 @@ body.seated #hint,body.seated #action{display:none!important}
   <div class="me-card"><span class="av" id="meEmo">👧</span><span><b id="meNick">나</b><small id="meAv"></small></span></div>
   <div id="menuGrid">
     <button data-open="stamp"><span>🔖</span>출석도장</button>
+    <button data-open="counsel" id="csTile"><span>💬</span>상담 신청</button>
     <button data-open="map"><span>🗺</span>학당 지도</button>
     <button data-open="records"><span>📒</span>기록장</button>
     <button data-open="quotes"><span>📜</span>오늘의 문장</button>
@@ -330,6 +334,10 @@ body.seated #hint,body.seated #action{display:none!important}
   <div id="recBody"></div>
 </div></div>
 
+<div id="counsel" class="modal"><div class="sheet paper"><div class="grip"></div>
+  <div class="sh"><button class="back" data-back>‹ 설정</button><span>💬 선생님과 상담하기</span><button class="x" data-close>×</button></div>
+  <div id="csBody"></div>
+</div></div>
 <div id="teacher" class="modal"><div class="sheet paper"><div class="grip"></div>
   <div class="sh"><button class="back" data-back>‹ 설정</button><span>🧑‍🏫 선생님 화면</span><button class="x" data-close>×</button></div>
   <div class="tSum" id="tSum"></div>
@@ -342,6 +350,8 @@ body.seated #hint,body.seated #action{display:none!important}
     <div class="tHr" id="tChH"><select id="tCh0"></select><span>부터</span><select id="tCh1"></select><span>까지</span></div>
     <div class="sec">학당 입장 시간</div><select id="tLock"><option value="off">언제나 들어올 수 있어요</option><option value="on">밤에는 문을 닫아요</option></select>
     <div class="tHr" id="tLkH"><select id="tLk0"></select><span>에 닫고</span><select id="tLk1"></select><span>에 열어요</span></div>
+    <div class="sec">💬 상담 신청 연결</div><div class="empty">교무실 프로그램 → 💬 상담 관리자 → 📅 상담 신청 받기 → <b>🔗 학생용 링크 복사</b>를 누른 뒤 여기에 붙여 넣으세요. 학생들은 메뉴의 ‘💬 상담 신청’에서 바로 신청하고, 신청은 교무실 프로그램 승인 목록으로 들어가요.</div>
+    <input id="tRsv" placeholder="https://아이디.github.io/reservation/?a=…" autocomplete="off">
     <button class="primary" id="tSave" style="margin-top:14px">학급 설정 저장</button>
     <div class="empty" style="margin-top:8px">선생님 화면과 설정은 선생님 암호로 들어온 기기에서만 보여요. 학생들 화면에는 나타나지 않아요.</div>
   </div></div></div>
@@ -523,7 +533,7 @@ body.seated #hint,body.seated #action{display:none!important}
 <script>
 (async function(){
   try{await Promise.race([Promise.all([document.fonts.load('800 80px "Nanum Myeongjo"','雲書學堂閣基礎魔法靈藥溫和寮體力勅令符天地玄黃第一講藥草園天下大將軍地女'),document.fonts.load('30px "Gowun Batang"','가나다 마법')]),new Promise(r=>setTimeout(r,2500))]);}catch(e){}
-  try{for(const s of ['core.js','avatars.js','wardrobe.js','emotes.js','pets.js','spaces.js','sound.js','prologue.js','app.js','class.js','quotes.js','campus.js']){await new Promise((res,rej)=>{const el=document.createElement('script');el.src=s+'?v=1123';el.onload=res;el.onerror=()=>rej(new Error(s+' 불러오기 실패'));document.body.appendChild(el);});}}
+  try{for(const s of ['core.js','avatars.js','wardrobe.js','emotes.js','pets.js','spaces.js','sound.js','prologue.js','app.js','class.js','quotes.js','campus.js']){await new Promise((res,rej)=>{const el=document.createElement('script');el.src=s+'?v=1123c';el.onload=res;el.onerror=()=>rej(new Error(s+' 불러오기 실패'));document.body.appendChild(el);});}}
   catch(e){document.getElementById('loadTxt').textContent='학당을 열지 못했어요: '+e.message;}
 })();
 window.addEventListener('error',e=>{const l=document.getElementById('loadTxt');if(l)l.textContent='오류: '+e.message;});
