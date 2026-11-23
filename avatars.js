@@ -21,8 +21,8 @@ const AVATARS=[
  {id:'mandarin',name:'원앙',emo:'🪿',type:'bird',mandarin:true,bc:0xf4e2b2,lc:0x2a7a66,beak:'#de4f33'},
  {id:'peacock',name:'공작',emo:'🦚',type:'bird',peacock:true,bc:0x1166c7,lc:0x12a18a,beak:'#80816a'},
  {id:'jujak',name:'주작',emo:'🔥',type:'bird',phoenix:true,bc:0xec5b3f,lc:0xf2b040,beak:'#f39a2f',god:true},
- {id:'eastern-dragon',name:'동양용',emo:'🐉',type:'beast',sp:'dragon',c:0xd76860,b:0xf3d0a3,ear:'none',horn:'antler',tail:'dragon',vest:0xd76860,dragonColor:true,dragonStyle:'east',noGat:true,god:true},
- {id:'western-dragon',name:'서양용',emo:'🐲',type:'beast',sp:'dragon',c:0xd76860,b:0xf3d0a3,ear:'none',tail:'dragon',vest:0xd76860,dragonColor:true,dragonStyle:'west',noGat:true,god:true},
+ {id:'eastern-dragon',name:'동양용',emo:'🐉',type:'beast',sp:'dragon',c:0x8fbde0,b:0xf1f7fe,ear:'none',horn:'antler',tail:'dragon',vest:0xd76860,dragonColor:true,dragonStyle:'east',noGat:true,god:true},
+ {id:'western-dragon',name:'서양용',emo:'🐲',type:'beast',sp:'dragon',c:0xf3a0ad,b:0xffe5ce,ear:'none',tail:'dragon',vest:0xd76860,dragonColor:true,dragonStyle:'west',noGat:true,god:true},
  {id:'cheongryong',name:'청룡 · 사방신',emo:'🐉',type:'beast',sp:'dragon',c:0x3f93ad,b:0xf4e8bc,ear:'none',horn:'antler',tail:'dragon',vest:0x2a4a7a,god:true,noGat:true},
  {id:'baekho',name:'백호 · 사방신',emo:'🐯',type:'beast',sp:'cat',c:0xfbf8f2,b:0xffffff,ear:'round',eye:'#5aa0d8',tail:'long',mask:'tiger',tiger:true,vest:0x6a7a8a,god:true},
  {id:'hyeonmu',name:'현무 · 사방신',emo:'🐢',type:'turtle',dark:true,god:true}];
@@ -31,7 +31,7 @@ const FACES=[['base','🙂','기본'],['smile','😊','웃음'],['joy','🤩','�
 
 /* ---------- drawn faces ---------- */
 const FACE_CACHE={};
-function faceTex(cfg,expr){const key=cfg.id+'|'+expr;if(FACE_CACHE[key])return FACE_CACHE[key];
+function faceTex(cfg,expr){if(cfg.dragonStyle)return dragonFaceArt(cfg,expr);const key=cfg.id+'|'+expr;if(FACE_CACHE[key])return FACE_CACHE[key];
   const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.lineCap=g.lineJoin='round';
   const K=cfg.type==='human'?'human':cfg.type==='beast'?cfg.sp:cfg.type==='pet'?cfg.k:cfg.type;
   const ink=K==='human'?'#2a1c16':'#33241c';const big=K==='human';
@@ -100,8 +100,157 @@ function avatarBook(A,y,z){const b=new THREE.Group();b.position.set(0,y,z);[-1,1
 
 /* ---------- builders ---------- */
 
-function lookPick(look,key,def){try{const i=look&&look.c&&look.c[key];return i&&window.PALETTE&&PALETTE[i]?PALETTE[i][1]:def;}catch(e){return def;}}
+function lookPick(look,key,def){try{const i=look&&look.c&&look.c[key];return i&&typeof PALETTE!=='undefined'&&PALETTE[i]?PALETTE[i][1]:def;}catch(e){return def;}}
 function glowMat(hex){return std(hex,{emissive:new THREE.Color(hex).multiplyScalar(.22)});}
+/* 용 캐릭터 전용 3D 모델러: 둥근 주둥이, 동양용의 S자 몸, 서양용의 네 발과 박쥐 날개 */
+function dragonLine(parent,points,radius,mat){
+  const crv=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));
+  const m=new THREE.Mesh(new THREE.TubeGeometry(crv,Math.max(20,points.length*9),radius,8,false),mat);
+  parent.add(m);return m;
+}
+function dragonSphere(parent,r,mat,x,y,z,sx=1,sy=1,sz=1){return sph(parent,r,mat,x,y,z,sx,sy,sz);}
+function dragonFaceArt(cfg,expr){
+  const key='new-dragon:'+cfg.id+'|'+expr;
+  if(FACE_CACHE[key])return FACE_CACHE[key];
+  const c=document.createElement('canvas'); c.width=c.height=256;
+  const g=c.getContext('2d');g.lineCap='round';g.lineJoin='round';
+  const west=cfg.dragonStyle==='west', ey=115, ex=west?43:38;
+  g.strokeStyle='#403038';g.fillStyle='#403038';g.lineWidth=6;
+  const cheeks=(x)=>{g.save();g.globalAlpha=.72;g.fillStyle=west?'#f4a6a9':'#ffb4b7';g.beginPath();g.ellipse(x,148,16,9,0,0,Math.PI*2);g.fill();g.restore();};
+  cheeks(128-72);cheeks(128+72);
+  [-1,1].forEach(s=>{const x=128+s*ex;
+    if(['smile','joy','blink'].includes(expr)){
+      g.beginPath();g.moveTo(x-11,ey+2);g.quadraticCurveTo(x,ey-11,x+11,ey+2);g.stroke();
+      if(expr==='joy'){g.beginPath();g.moveTo(x-7,ey+11);g.lineTo(x+7,ey+11);g.stroke();}
+    }else if(expr==='sleepy'){
+      g.beginPath();g.moveTo(x-9,ey+2);g.quadraticCurveTo(x,ey+7,x+9,ey+2);g.stroke();
+    }else{
+      // 둥글고 작지만 또렷한 점눈. 부리는 없음.
+      g.beginPath();g.ellipse(x,ey,expr==='wow'?10:8,expr==='wow'?12:10,0,0,Math.PI*2);g.fill();
+      g.fillStyle='#fff';g.beginPath();g.arc(x+3,ey-4,2.8,0,Math.PI*2);g.fill();g.fillStyle='#403038';
+      if(expr==='focus'){g.beginPath();g.moveTo(x-11,ey-14);g.lineTo(x+7,ey-18);g.stroke();}
+    }
+  });
+  // 실제 3D 주둥이에 입을 따로 그리므로 얼굴 텍스처에는 눈과 볼만 그림.
+  const texture=new THREE.CanvasTexture(c);texture.anisotropy=4;FACE_CACHE[key]=texture;return texture;
+}
+function makeDragonAvatar(A,cfg,look){
+  const west=cfg.dragonStyle==='west',B=A.bob;
+  const main=lookPick(look,'av',cfg.c),light=lookPick(look,'av2',cfg.b);
+  const M=fur(main),P=fur(light),ink=std(0x554451),blush=std(0xf3aaa8),white=std(0xfffaf1);
+  const horn=std(west?0x777781:new THREE.Color(light).lerp(new THREE.Color(0xffffff),.3).getHex()),hornLight=std(west?0xaaaaaf:new THREE.Color(light).lerp(new THREE.Color(0xffffff),.65).getHex());
+  const nose=std(0x5a5053),claw=std(0xfff4e6);
+  // 용 전용 얼굴을 투명한 앞면으로 구현. 날카로운 삼각형 부리를 사용하지 않음.
+  if(west){
+    // 네 발 달린 새끼 서양용. 낮고 동글납작한 몸통.
+    const torso=dragonSphere(B,.39,M,0,.57,.16,1.05,.85,1.38);
+    dragonSphere(B,.26,P,0,.57,-.23,.98,1.02,.42);
+    // 짧고 둥근 다리 네 개; 앞발과 뒷발 구분.
+    [-1,1].forEach((s,i)=>[-1,1].forEach((fb,j)=>{
+      const leg=new THREE.Group();leg.position.set(s*.28,.38,fb>0?.49:-.35);B.add(leg);
+      dragonSphere(leg,.15,M,0,-.08,0,1.02,1.28,.95);
+      dragonSphere(leg,.145,M,0,-.24,-.09,1.12,.52,1.24);
+      [-1,0,1].forEach(k=>dragonSphere(leg,.03,claw,k*.075,-.25,-.23,.85,.7,1.3));
+      A.legs.push({g:leg,ph:(i+j)%2?PI:0});
+    }));
+    // 날개는 평평한 단순 도형이 아닌 3개의 둥근 물결을 갖는 큰 박쥐 날개.
+    [-1,1].forEach(s=>{
+      const wg=new THREE.Group();wg.position.set(0,0,.43);B.add(wg);
+      const sh=new THREE.Shape();
+      sh.moveTo(s*.24,.83);
+      sh.bezierCurveTo(s*.45,1.2,s*.56,1.87,s*.91,1.94);
+      sh.bezierCurveTo(s*1.03,1.83,s*1.1,1.62,s*1.23,1.54);
+      sh.bezierCurveTo(s*1.01,1.51,s*.94,1.41,s*.98,1.19);
+      sh.bezierCurveTo(s*.83,1.23,s*.73,1.16,s*.72,1.01);
+      sh.bezierCurveTo(s*.57,1.06,s*.42,.9,s*.24,.83);
+      const wing=new THREE.Mesh(new THREE.ShapeGeometry(sh,20),new THREE.MeshToonMaterial({color:light,side:THREE.DoubleSide,gradientMap:GRAD}));
+      wing.position.z=.01;wg.add(wing);
+      const rim=std(main);
+      dragonLine(wg,[[s*.24,.83,.04],[s*.44,1.33,.04],[s*.69,1.83,.04],[s*.91,1.94,.04]],.045,rim);
+      dragonLine(wg,[[s*.24,.83,.05],[s*.49,1.24,.05],[s*.72,1.01,.05]],.024,rim);
+      dragonLine(wg,[[s*.5,1.28,.06],[s*.83,1.55,.06],[s*1.23,1.54,.06]],.021,rim);
+      A.arms.push({g:wg,ph:0,s,wing:true});
+    });
+    // 부드러운 목과 큼직한 둥근 머리.
+    dragonSphere(B,.23,M,0,.83,-.33,1,.92,1.2);
+    const head=new THREE.Group();head.position.set(0,1.12,-.46);B.add(head);A.head=head;
+    dragonSphere(head,.34,M,0,0,0,1.16,1.04,1.05);
+    A.face=faceDecal(head,.34,cfg,1.16,1.04,1.05);
+    // 뾰족한 부리가 아니라 코끝이 둥글고 넓은 포유류형 주둥이.
+    dragonSphere(head,.19,M,0,-.14,-.31,1.03,.68,1.25);
+    dragonSphere(head,.155,P,0,-.18,-.43,1.08,.55,.82);
+    [-1,1].forEach(s=>{
+      dragonSphere(head,.028,nose,s*.082,-.14,-.555,.72,.75,.8);
+      dragonSphere(head,.087,M,s*.29,-.12,-.17,1,.73,1);
+      // 삐죽하지 않은 회색 뿔 2쌍
+      const horn0=new THREE.Mesh(new THREE.ConeGeometry(.11,.32,12),horn);horn0.position.set(s*.21,.31,.06);horn0.rotation.z=-s*.35;horn0.rotation.x=-.12;head.add(horn0);
+      const horn1=new THREE.Mesh(new THREE.ConeGeometry(.06,.18,10),hornLight);horn1.position.set(s*.3,.21,.13);horn1.rotation.z=-s*.65;head.add(horn1);
+    });
+    // 이빨 대신 작은 U자 미소.
+    dragonLine(head,[[-.095,-.224,-.555],[-.045,-.25,-.58],[0,-.255,-.587],[.05,-.25,-.58],[.095,-.224,-.555]],.009,ink);
+    // 둥근 등 가시와 짧은 유연한 꼬리.
+    for(let k=0;k<3;k++){
+      const sp=new THREE.Mesh(new THREE.ConeGeometry(.072-k*.006,.14,9),horn);
+      sp.position.set(0,.9-k*.08,.21+k*.22);sp.rotation.x=.4;B.add(sp);
+    }
+    const tailG=new THREE.Group();tailG.position.set(0,.54,.61);B.add(tailG);
+    dragonLine(tailG,[[0,0,0],[.25,.03,.25],[.42,.12,.38],[.54,.26,.39]],.105,M);
+    dragonSphere(tailG,.12,M,.53,.27,.39,1.18,.82,.68);
+    A.tails.push(tailG);
+    avatarBook(A,.66,-.83);A.h=1.96;A.waddle=.045;
+    A.headR=.34;A.headS=[1.16,1.04,1.05];
+  }else{
+    // 동양용: 다리가 아닌 구불구불 말린 뱀처럼 긴 몸, 곧게 올라간 목, 구슬 두 개.
+    const bend=[[-.91,.85,.22],[-1.09,.58,.31],[-1.04,.31,.35],[-.69,.22,.45],[-.18,.26,.56],[.37,.33,.55],[.49,.39,.2],[.21,.43,-.1],[-.11,.51,-.22],[-.12,.91,-.27],[-.08,1.29,-.3]];
+    const c=dragonLine(B,bend,.185,M);
+    // 몸 아랫부분의 부드러운 밝은색 복부 띠.
+    const bellyPoints=[[-.89,.85,.06],[-1.09,.57,.14],[-1.04,.3,.18],[-.69,.23,.27],[-.19,.27,.39],[.36,.34,.4],[.49,.39,.03],[.2,.43,-.28],[-.1,.51,-.39],[-.12,.93,-.44],[-.08,1.27,-.46]];
+    dragonLine(B,bellyPoints,.082,P);
+    dragonSphere(B,.27,M,-.08,1.12,-.30,.84,1.5,.9);
+    dragonSphere(B,.16,P,-.08,1.06,-.445,.66,1.75,.5);
+    const head=new THREE.Group();head.position.set(-.08,1.53,-.30);B.add(head);A.head=head;
+    dragonSphere(head,.275,M,0,0,0,1.02,1.0,.94);
+    A.face=faceDecal(head,.275,cfg,1.02,1.0,.94);
+    dragonSphere(head,.14,M,0,-.13,-.24,1.05,.66,1.32);
+    dragonSphere(head,.13,P,0,-.164,-.32,1.02,.54,.95);
+    [-1,1].forEach(s=>{
+      dragonSphere(head,.018,nose,s*.06,-.125,-.445,.9,.9,.85);
+      dragonSphere(head,.065,M,s*.21,-.08,-.115,1,.75,1);
+      // 짧고 가지 친 부드러운 뿔; 귀의 소용돌이.
+      dragonLine(head,[[s*.17,.22,.04],[s*.22,.34,.06],[s*.29,.41,.07]],.021,horn);
+      dragonLine(head,[[s*.22,.32,.06],[s*.14,.38,.08]],.015,hornLight);
+      const spiral=new THREE.Group();spiral.position.set(s*.24,.06,.09);head.add(spiral);
+      dragonLine(spiral,[[0,0,0],[s*.08,.05,-.005],[s*.11,.12,0],[s*.035,.13,.005],[s*.04,.07,.01]],.025,hornLight);
+      // 꼬리털이 아니라 가늘고 둥글게 뻗는 용 수염.
+      dragonLine(head,[[s*.13,-.16,-.27],[s*.28,-.22,-.27],[s*.4,-.19,-.24]],.012,hornLight);
+    });
+    dragonLine(head,[[-.075,-.21,-.445],[-.035,-.236,-.45],[0,-.24,-.46],[.036,-.236,-.45],[.075,-.21,-.445]],.008,ink);
+    // 작은 손 2개 (입체적인 앞발)
+    [-1,1].forEach((s,i)=>{
+      const arm=new THREE.Group();arm.position.set(s*.225,.79,-.26);B.add(arm);
+      dragonSphere(arm,.09,M,s*.07,-.06,-.08,.93,1.25,.9);
+      dragonSphere(arm,.075,M,s*.1,-.18,-.14,1.15,.62,1.15);
+      A.arms.push({g:arm,ph:i?0:PI,s});
+    });
+    // 꼬리를 장식하는 동그란 푸른 구슬 두 개.
+    const pearl=std(0x35a8de),pearlHi=std(0x9de9fa);
+    [[-.92,.86,.21],[-.96,.67,.16]].forEach(([x,y,z],i)=>{
+      dragonSphere(B,i===0?.095:.075,pearl,x,y,z,1,1,1);
+      dragonSphere(B,.027,pearlHi,x-.025,y+.027,z-.075,1,1,1);
+    });
+    // 머리 뒤에 작은 갈기 장식
+    for(let i=0;i<4;i++){
+      const p=new THREE.Mesh(new THREE.ConeGeometry(.06-i*.004,.13,7),horn);
+      p.position.set(-.08,1.21-i*.13,-.1+i*.01);p.rotation.x=.75;B.add(p);
+    }
+    avatarBook(A,.65,-.69);A.h=2.15;A.waddle=.03;
+    A.headR=.275;A.headS=[1.02,1,.94];
+  }
+  // 기존 전체 캐릭터 공용 표정 기능에 연결.
+  A.setFace=function(expr){if(!A.face||A.expr===expr)return;A.expr=expr;A.face.material.map=faceTex(cfg,expr);};
+  return A;
+}
+
 function makeAvatar(id,look){if(id==='shiba')id='sapsal';const cfg=AVMAP[id]||AVATARS[0];const A={id,cfg,garb:[],legWear:[],sleeves:[],root:new THREE.Group(),bob:new THREE.Group(),legs:[],arms:[],tails:[],hop:false,waddle:0,h:2.2,face:null,expr:'base',blinkAt:performance.now()+2000+Math.random()*3000};A.root.add(A.bob);
   const sh=new THREE.Mesh(new THREE.PlaneGeometry(1.2,1.2),new THREE.MeshBasicMaterial({map:TEX.shadow,transparent:true,depthWrite:false}));sh.rotation.x=-PI/2;sh.position.y=.03;A.root.add(sh);
   const B=A.bob;
@@ -123,6 +272,7 @@ function makeAvatar(id,look){if(id==='shiba')id='sapsal';const cfg=AVMAP[id]||AV
       for(let k=0;k<5;k++){const a=-.6+k*.3;sph(head,.1,hair,Math.sin(a)*.3,.3+Math.cos(k*1.7)*.025,-Math.cos(a)*.27,1.1,.6,.8);}sph(head,.08,hair,.05,.42,-.05);}
     A.gat=makeGat(head,.33,1.02,-.1);avatarBook(A,.98,-.42);A.h=2.4;A.waddle=.03;
     A.fit={y0:.42,y1:1.17,r1:.2,r0:.25,neck:1.15,legTop:.36,legLen:.3,legR:.1,sleeve:[.1,1.9,-.17],human:true};A.headR=.4;A.headS=[1,.96,.95];}
+  else if(cfg.dragonStyle){makeDragonAvatar(A,cfg,look);}
   else if(cfg.type==='beast'){const bodyHex=cfg.dragonColor?lookPick(look,'av',cfg.c):cfg.c, bellyHex=cfg.dragonColor?lookPick(look,'av2',cfg.b):cfg.b, vestHex=cfg.dragonColor?bodyHex:cfg.vest; const F=fur(bodyHex),Bl=fur(bellyHex);
     [-1,1].forEach((s,i)=>{const g=new THREE.Group();g.position.set(s*.16,.3,0);B.add(g);sph(g,.12,F,0,-.1,0,1,1.25,1);sph(g,.12,Bl,0,-.24,-.05,1,.55,1.35);const pad=new THREE.Mesh(new THREE.CircleGeometry(.05,10),PINKPAD);pad.position.set(0,-.25,.06);pad.rotation.x=PI/2.2;g.add(pad);A.legs.push({g,ph:i?PI:0});});
     sph(B,.35,F,0,.56,0,1,1.05,.92);sph(B,.25,Bl,0,.54,-.15,1,1.15,.7);
