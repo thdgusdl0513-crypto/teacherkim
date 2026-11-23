@@ -250,6 +250,7 @@ body.seated #hint,body.seated #action{display:none!important}
 #csBody .cSt{font-size:12px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap}.cSt.w{background:#fde7b0;color:#8a5a10}.cSt.y{background:#cdeccf;color:#24693a}.cSt.n{background:#f6d0cc;color:#9a3a30}.cSt.c{background:#e5e0da;color:#6a5a50}
 #csBody .cMine button{font:inherit;font-size:12px;border:1px solid #e2cfb4;background:#fff;border-radius:10px;padding:5px 8px;cursor:pointer}#csBody .cMsg{font-size:13px;color:#9a3a30;margin-top:6px;min-height:1em}
 #tRsvBox .cMine{border-radius:12px;background:rgba(255,255,255,.65);padding:8px 10px;margin:6px 0}#tRsvBox .cMine button{font:inherit;font-size:13px;border:0;border-radius:10px;padding:6px 10px;margin:6px 6px 0 0;cursor:pointer}#counsel .sheet{max-height:94vh}
+.tWarn{margin:6px 0 2px;font-size:12.5px;background:#fdecea;color:#8a2a20;border-radius:10px;padding:6px 9px;line-height:1.5}.tWarn details{margin-top:2px}.tWarn summary{cursor:pointer}.tWarn button{font:inherit;font-size:12px;border:1px solid #e8b8b0;background:#fff;border-radius:8px;padding:3px 8px;margin-top:4px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -547,7 +548,7 @@ body.seated #hint,body.seated #action{display:none!important}
 <script>
 (async function(){
   try{await Promise.race([Promise.all([document.fonts.load('800 80px "Nanum Myeongjo"','雲書學堂閣基礎魔法靈藥溫和寮體力勅令符天地玄黃第一講藥草園天下大將軍地女'),document.fonts.load('30px "Gowun Batang"','가나다 마법')]),new Promise(r=>setTimeout(r,2500))]);}catch(e){}
-  try{for(const s of ['core.js','avatars.js','wardrobe.js','emotes.js','pets.js','spaces.js','sound.js','prologue.js','app.js','class.js','quotes.js','campus.js']){await new Promise((res,rej)=>{const el=document.createElement('script');el.src=s+'?v=1123f';el.onload=res;el.onerror=()=>rej(new Error(s+' 불러오기 실패'));document.body.appendChild(el);});}}
+  try{for(const s of ['words.js','core.js','avatars.js','wardrobe.js','emotes.js','pets.js','spaces.js','sound.js','prologue.js','app.js','class.js','quotes.js','campus.js']){await new Promise((res,rej)=>{const el=document.createElement('script');el.src=s+'?v=1123g';el.onload=res;el.onerror=()=>rej(new Error(s+' 불러오기 실패'));document.body.appendChild(el);});}}
   catch(e){document.getElementById('loadTxt').textContent='학당을 열지 못했어요: '+e.message;}
 })();
 window.addEventListener('error',e=>{const l=document.getElementById('loadTxt');if(l)l.textContent='오류: '+e.message;});
