@@ -25,8 +25,8 @@ const AVATARS=[
  {id:'dino-stegosaurus',name:'스테고사우루스',emo:'🦕',type:'dino',species:'stego',c:0xe6a85a,b:0xd8603e,vest:0x5a7aa8},
  {id:'dino-tyrannosaurus',name:'티라노사우루스',emo:'🦖',type:'dino',species:'rex',c:0x62b27e,b:0xeee0a4,vest:0xb8625a},
  {id:'dino-ankylosaurus',name:'안킬로사우루스',emo:'🦕',type:'dino',species:'anky',c:0xa8bf5c,b:0x8a6a44,vest:0x8aa86a},
- {id:'eastern-dragon',name:'동양용',emo:'🐉',type:'beast',sp:'dragon',c:0x6cc49c,b:0xf6dc8c,ear:'none',horn:'antler',tail:'dragon',vest:0xc4584a,eye:'#e8b33a',dragonColor:true,dragonStyle:'east',god:true},
- {id:'western-dragon',name:'서양용',emo:'🐲',type:'beast',sp:'dragon',c:0xe4727c,b:0xffd29a,ear:'none',horn:'west',tail:'arrow',vest:0x5a6a8a,eye:'#7ac142',dragonColor:true,dragonStyle:'west',god:true},
+ {id:'eastern-dragon',name:'동양용',emo:'🐉',type:'beast',sp:'dragon',c:0xf4c64a,b:0xfff3d0,ear:'none',horn:'antler',tail:'dragon',vest:0xc4584a,dragonColor:true,dragonStyle:'east',god:true},
+ {id:'western-dragon',name:'서양용',emo:'🐲',type:'beast',sp:'dragon',c:0x78c79c,b:0xfff6e2,ear:'none',horn:'smallAntler',tail:'chub',vest:0xe08a7a,dragonColor:true,dragonStyle:'west',god:true},
  {id:'cheongryong',name:'청룡 · 사방신',emo:'🐉',type:'beast',sp:'dragon',c:0x3f93ad,b:0xf4e8bc,ear:'none',horn:'antler',tail:'dragon',vest:0x2a4a7a,god:true},
  {id:'baekho',name:'백호 · 사방신',emo:'🐯',type:'beast',sp:'cat',c:0xfbf8f2,b:0xffffff,ear:'round',eye:'#5aa0d8',tail:'long',mask:'tiger',tiger:true,vest:0x6a7a8a,god:true},
  {id:'jujak',name:'주작 · 사방신',emo:'🐦‍🔥',type:'bird',phoenix:true,beak:'#d89a2a',god:true},
@@ -36,6 +36,9 @@ const FACES=[['base','🙂','기본'],['smile','😊','웃음'],['joy','🤩','�
 
 /* ---------- drawn faces ---------- */
 function lookPick(look,key,def){try{const i=look&&look.c&&look.c[key];return i&&typeof PALETTE!=='undefined'&&PALETTE[i]?PALETTE[i][1]:def;}catch(e){return def;}}
+const AV_GRAD=(()=>{const v=[66,80,96,112,128,144,160,176,192,206,218,228];const d=new Uint8Array(v.length*3);v.forEach((x,i)=>d.set([x,x,x],i*3));const t=new THREE.DataTexture(d,v.length,1,THREE.RGBFormat);t.minFilter=t.magFilter=THREE.LinearFilter;t.generateMipmaps=false;t.needsUpdate=true;return t;})();
+const AV_SOFT=new Map();
+function softenAvatar(A){A.root.traverse(o=>{const m=o.material;if(!m||!m.isMeshToonMaterial||m.gradientMap===AV_GRAD||m===GATM||m.transparent&&m.opacity<.95)return;let c=AV_SOFT.get(m);if(!c){c=m.clone();c.gradientMap=AV_GRAD;c.needsUpdate=true;AV_SOFT.set(m,c);AV_SOFT.set(c,c);}o.material=c;});}
 const FACE_CACHE={};
 function faceTex(cfg,expr){const key=cfg.id+'|'+expr;if(FACE_CACHE[key])return FACE_CACHE[key];
   const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.lineCap=g.lineJoin='round';
@@ -76,7 +79,6 @@ function faceTex(cfg,expr){const key=cfg.id+'|'+expr;if(FACE_CACHE[key])return F
   const open=expr==='joy'||expr==='smile'&&K!=='human';
   if(K==='dog'){g.beginPath();g.ellipse(128,my-14,12,8,0,0,PI*2);g.fill();}
   if(K==='cat'){g.fillStyle='#e88a9a';g.beginPath();g.moveTo(121,my-14);g.lineTo(135,my-14);g.lineTo(128,my-6);g.closePath();g.fill();g.fillStyle=ink;g.strokeStyle='rgba(60,40,30,.55)';g.lineWidth=2.5;[-1,1].forEach(s=>[0,10].forEach(dy=>{g.beginPath();g.moveTo(128+s*34,my-8+dy);g.lineTo(128+s*70,my-14+dy*1.4);g.stroke();}));g.strokeStyle=ink;g.lineWidth=4.5;}
-  if(K==='dragon'){[-1,1].forEach(s=>{g.beginPath();g.ellipse(128+s*12,my-18,4,5,0,0,PI*2);g.fill();});}
   if(K==='bird'){g.fillStyle=cfg.beak||'#3a2a20';g.beginPath();g.moveTo(118,my-16);g.lineTo(138,my-16);g.lineTo(128,my-2);g.closePath();g.fill();}
   else if(expr==='wow'){g.beginPath();g.ellipse(128,my+2,8,10,0,0,PI*2);g.fill();}
   else if(K==='frog'){g.lineWidth=6;g.beginPath();g.moveTo(60,my-6);g.quadraticCurveTo(128,my+(open?44:28),196,my-6);g.stroke();if(open){g.fillStyle='#e86a7a';g.beginPath();g.moveTo(80,my+2);g.quadraticCurveTo(128,my+38,176,my+2);g.closePath();g.fill();}}
@@ -87,7 +89,6 @@ function faceTex(cfg,expr){const key=cfg.id+'|'+expr;if(FACE_CACHE[key])return F
   else{ if(expr==='joy'){g.fillStyle='#d8606a';g.beginPath();g.arc(128,my-4,14,0,PI);g.fill();}else if(expr==='shy'||expr==='sleepy'||expr==='focus'){g.beginPath();g.moveTo(120,my);g.lineTo(136,my);g.stroke();}else{g.beginPath();g.arc(128,my-8,10,PI*.2,PI*.8);g.stroke();}}
   if(cfg.species==='rex'&&expr!=='wow'){g.fillStyle='#fffaf0';[-14,0,14].forEach(dx=>{g.beginPath();g.moveTo(128+dx-5,my-12);g.lineTo(128+dx+5,my-12);g.lineTo(128+dx,my-3);g.closePath();g.fill();});}
   if(cfg.species==='brachio'&&expr!=='blink'&&expr!=='sleepy'&&expr!=='joy'){g.strokeStyle=ink;g.lineWidth=3;[-1,1].forEach(s=>{const x=128+s*ex;[0,1].forEach(k=>{g.beginPath();g.moveTo(x+s*(8+k*5),ey-12+k*2);g.lineTo(x+s*(16+k*7),ey-22+k*4);g.stroke();});});}
-  if(cfg.dragonStyle==='west'&&expr!=='wow'){g.fillStyle='#fffaf0';g.beginPath();g.moveTo(136,my-1);g.lineTo(145,my-3);g.lineTo(141,my+9);g.closePath();g.fill();}
   if(cfg.dragonStyle==='east'){g.strokeStyle='rgba(200,60,50,.85)';g.lineWidth=5;g.beginPath();g.moveTo(128,62);g.lineTo(128,80);g.stroke();}
   if(cfg.mask==='sapsal'){g.fillStyle='#ef9a86';g.beginPath();g.ellipse(128,my+16,11,15,0,0,PI*2);g.fill();g.strokeStyle='rgba(200,110,96,.7)';g.lineWidth=2;g.beginPath();g.moveTo(128,my+6);g.lineTo(128,my+20);g.stroke();}
   const t=new THREE.CanvasTexture(c);t.anisotropy=4;FACE_CACHE[key]=t;return t;}
@@ -141,20 +142,17 @@ function makeAvatar(id,look){if(id==='shiba')id='sapsal';const cfg=AVMAP[id]||AV
       else if(cfg.ear==='round'){sph(head,.12,F,s*.3,.3,.02,1,1,.6);sph(head,.07,std(0x3a3036),s*.3,.31,-.03,1,1,.4);}
       else if(cfg.ear==='none'){}
       else{const e=sph(head,.17,F,s*.4,-.04,.02,.55,1.15,.8);e.rotation.z=s*.3;sph(head,.12,F,s*.42,-.22,.02);}});
-    if(cfg.horn==='antler'){const H=std(0xe6b850,{emissive:0x3a2a08});[-1,1].forEach(s=>{const a=new THREE.Group();a.position.set(s*.2,.3,.08);a.rotation.z=-s*.35;head.add(a);cyl(a,.03,.04,.42,6,H,0,.2,0);const b1=cyl(a,.02,.03,.18,6,H,s*.06,.25,0);b1.rotation.z=-s*.8;const b2=cyl(a,.02,.03,.14,6,H,-s*.03,.33,0);b2.rotation.z=s*.7;});
-      const W=std(0xe6b850,{emissive:0x3a2a08});[-1,1].forEach(s=>{for(let i=0;i<5;i++){sph(head,.022,W,s*(.22+i*.06),-.1-i*.035-i*i*.006,-.36+i*.04);}});
-      const M=cfg.dragonStyle?DK:std(0x2a6a80,{emissive:0x081a20});for(let i=0;i<5;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(.07,.2,6),M);c.position.set(0,.32-i*.12,.28+i*.05);c.rotation.x=.9;head.add(c);}
+    if(cfg.horn==='antler'){const H=cfg.dragonStyle==='east'?std(0xd2553e,{emissive:0x3a0c08}):std(0xe6b850,{emissive:0x3a2a08});[-1,1].forEach(s=>{const a=new THREE.Group();a.position.set(s*.2,.3,.08);a.rotation.z=-s*.35;head.add(a);cyl(a,.03,.04,.42,6,H,0,.2,0);const b1=cyl(a,.02,.03,.18,6,H,s*.06,.25,0);b1.rotation.z=-s*.8;const b2=cyl(a,.02,.03,.14,6,H,-s*.03,.33,0);b2.rotation.z=s*.7;});
+      const W=cfg.dragonStyle==='east'?std(0xffe9a8,{emissive:0x3a3008}):std(0xe6b850,{emissive:0x3a2a08});[-1,1].forEach(s=>{for(let i=0;i<5;i++){sph(head,.022,W,s*(.22+i*.06),-.1-i*.035-i*i*.006,-.36+i*.04);}});
+      const M=cfg.dragonStyle==='east'?std(0xd2553e,{emissive:0x3a0c08}):std(0x2a6a80,{emissive:0x081a20});for(let i=0;i<5;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(.07,.2,6),M);c.position.set(0,.32-i*.12,.28+i*.05);c.rotation.x=.9;head.add(c);}
       for(let i=0;i<4;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(.06,.16,6),M);c.position.set(0,.85-i*.13,.3);c.rotation.x=.6;B.add(c);}}
-    if(cfg.dragonStyle==='east'){const G=std(0xf2c64e,{emissive:0x3a2a08});[-1,1].forEach(s=>{const pts=[[s*.12,-.16,-.42],[s*.26,-.18,-.44],[s*.38,-.24,-.4],[s*.44,-.34,-.34],[s*.42,-.44,-.3]].map(q=>new THREE.Vector3(...q));const w=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),20,.018,6,false),G);head.add(w);});
-      sph(head,.1,Bl,0,-.2,-.38,1.2,.55,.9);
+    if(cfg.dragonStyle==='east'){const G=std(0xd2553e,{emissive:0x3a0c08});[-1,1].forEach(s=>{const pts=[[s*.12,-.16,-.42],[s*.24,-.17,-.44],[s*.34,-.21,-.41],[s*.4,-.28,-.37]].map(q=>new THREE.Vector3(...q));const w=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),20,.018,6,false),G);head.add(w);});
       const pg=A.arms[1]?A.arms[1].g:A.bob;sph(pg,.09,std(0xfff2c0,{emissive:0xc8902a}),0,-.36,-.08);}
-    if(cfg.horn==='west'){const H=std(0x6a5048,{emissive:0x140c08});[-1,1].forEach(s=>{const h=new THREE.Group();h.position.set(s*.22,.28,.06);h.rotation.set(.75,0,-s*.35);head.add(h);const c1=new THREE.Mesh(new THREE.ConeGeometry(.08,.42,10),H);c1.position.y=.2;h.add(c1);});
-      for(let i=0;i<3;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(.055,.17,6),Bl);c.position.set(0,.36-i*.13,.2+i*.07);c.rotation.x=.8;head.add(c);}
-      for(let i=0;i<4;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(.06,.18,6),Bl);c.position.set(0,.86-i*.13,.3);c.rotation.x=.6;B.add(c);}
-      sph(head,.1,Bl,0,-.2,-.38,1.25,.55,.9);
-      const wings=new THREE.Group();wings.position.set(0,.78,.26);B.add(wings);A.westWings=wings;const memb=std(cfg.dragonColor?lookPick(look,'av2',cfg.b):cfg.b,{side:THREE.DoubleSide,emissive:new THREE.Color(cfg.dragonColor?lookPick(look,'av2',cfg.b):cfg.b).multiplyScalar(.15)});
-      [-1,1].forEach(s=>{const wg=new THREE.Group();wg.scale.set(s,1,1);wg.rotation.y=s*.5;wings.add(wg);const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(.5,.46);sh.lineTo(.64,.06);sh.quadraticCurveTo(.54,.04,.5,-.06);sh.quadraticCurveTo(.4,-.02,.35,-.12);sh.quadraticCurveTo(.25,-.05,.18,-.15);sh.quadraticCurveTo(.1,-.07,0,0);wg.add(new THREE.Mesh(new THREE.ShapeGeometry(sh),memb));
-        const bone=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0,0,.01),new THREE.Vector3(.26,.25,.01),new THREE.Vector3(.5,.46,.01),new THREE.Vector3(.64,.06,.01)]),16,.025,6,false),DK);wg.add(bone);});}
+    if(cfg.horn==='smallAntler'){const H=std(0xc98a4a,{emissive:0x2a1808});[-1,1].forEach(s=>{const a=new THREE.Group();a.position.set(s*.2,.3,.06);a.rotation.z=-s*.3;head.add(a);cyl(a,.035,.045,.26,8,H,0,.12,0);sph(a,.045,H,0,.25,0);const b=cyl(a,.028,.035,.13,8,H,s*.06,.15,0);b.rotation.z=-s*.9;sph(b,.035,H,0,.07,0);});
+      sph(B,.24,Bl,0,.56,-.2,1,1.15,.55);
+      const wings=new THREE.Group();wings.position.set(0,.8,.28);B.add(wings);A.westWings=wings;const memb=std(0xe2706c,{side:THREE.DoubleSide,emissive:0x3a1010});
+      [-1,1].forEach(s=>{const wg=new THREE.Group();wg.scale.set(s*.62,.62,.62);wg.rotation.y=s*.45;wings.add(wg);const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(.5,.46);sh.lineTo(.6,.1);sh.quadraticCurveTo(.5,.06,.46,-.04);sh.quadraticCurveTo(.36,0,.3,-.1);sh.quadraticCurveTo(.18,-.04,.12,-.12);sh.quadraticCurveTo(.06,-.06,0,0);
+        const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:.03,bevelEnabled:true,bevelThickness:.015,bevelSize:.015,bevelSegments:2}),memb);wg.add(m);});}
     if(cfg.tiger){const S=std(0x3a3036);[[.35,.68],[.33,.52],[.3,.36]].forEach((p,i)=>[-1,1].forEach(s=>{const m=sph(B,.06,S,s*p[0],p[1],.06,.35,.55,2.2);m.rotation.y=s*.4;}));[.68,.52].forEach(y=>{const m=sph(B,.05,S,0,y,.32,2.2,.4,.4);});}
     if(cfg.fluffy){for(let i=0;i<8;i++){const a=i/8*PI*2;sph(head,.12,F,Math.cos(a)*.32,.24+Math.sin(i)*.04,Math.sin(a)*.25);}for(let i=0;i<6;i++){const a=i/6*PI*2;sph(B,.12,F,Math.cos(a)*.3,.45,Math.sin(a)*.26);}sph(head,.07,std(0xff8fb0),.24,.32,-.12);}
     if(cfg.shaggy){const sf=fur(0xf6f3ec),sg=fur(0xe2ddd2);for(let i=0;i<22;i++){const a=i/22*PI*2;if(Math.sin(a)<-.55)continue;const m=sph(head,.1,i%3?sf:sg,Math.cos(a)*R(.34,.44),R(-.2,.2),Math.sin(a)*R(.3,.38),1,R(2,2.8),1);m.rotation.z=R(-.2,.2);}
@@ -164,8 +162,9 @@ function makeAvatar(id,look){if(id==='shiba')id='sapsal';const cfg=AVMAP[id]||AV
     if(cfg.tail==='long'){tg.rotation.x=.4;sph(tg,.07,F,0,.12,.04,1,2.4,1);sph(tg,.065,F,0,.34,.02,1,1.4,1);}
     else if(cfg.tail==='curl'){const t=new THREE.Mesh(new THREE.TorusGeometry(.13,.07,8,16,PI*1.6),F);t.rotation.y=PI/2;t.position.set(0,.2,.04);tg.add(t);}
     else if(cfg.tail==='stub'){sph(tg,.1,F,0,.02,.04);}
+    else if(cfg.tail==='chub'){tg.rotation.x=.35;for(let i=0;i<5;i++){const r=.15-i*.022;sph(tg,r,F,0,.02+i*.04,.06+i*.09);}}
     else if(cfg.tail==='arrow'){tg.rotation.x=.25;for(let i=0;i<6;i++){const r=.12-i*.014;sph(tg,r,F,0,.04+i*.06,.06+i*.1);}const tip=new THREE.Mesh(new THREE.ConeGeometry(.1,.2,4),Bl);tip.position.set(0,.4,.66);tip.rotation.x=1.3;tip.scale.set(1,1,.35);tg.add(tip);}
-    else if(cfg.tail==='dragon'){tg.rotation.x=.2;for(let i=0;i<7;i++){const r=.12-i*.012;sph(tg,r,i%2?F:(cfg.dragonStyle?DK:fur(0x358aa2)),0,.05+i*.08+Math.sin(i*.8)*.02,.06+i*.1-i*i*.008);}const tuft=std(0xe6b850,{emissive:0x3a2a08});for(let k=0;k<4;k++)sph(tg,.06,tuft,R(-.05,.05),.62+R(-.04,.04),.5+R(-.04,.04));}
+    else if(cfg.tail==='dragon'){tg.rotation.x=.2;for(let i=0;i<7;i++){const r=.12-i*.012;sph(tg,r,i%2?F:(cfg.dragonStyle?std(0xd2553e,{emissive:0x3a0c08}):fur(0x358aa2)),0,.05+i*.08+Math.sin(i*.8)*.02,.06+i*.1-i*i*.008);}const tuft=std(0xe6b850,{emissive:0x3a2a08});for(let k=0;k<4;k++)sph(tg,.06,tuft,R(-.05,.05),.62+R(-.04,.04),.5+R(-.04,.04));}
     else sph(tg,.17,F,0,.1,.02);
     if(cfg.tiger&&cfg.tail==='long'){const S=std(0x3a3036);[.18,.3,.42].forEach(y=>{const r=new THREE.Mesh(new THREE.TorusGeometry(.068,.016,6,14),S);r.rotation.x=PI/2;r.position.set(0,y,.03);tg.add(r);});}
     A.gat=makeGat(head,.37,.9,-.12);avatarBook(A,.78,-.4);A.h=2.0;A.waddle=.08;
@@ -236,6 +235,7 @@ function makeAvatar(id,look){if(id==='shiba')id='sapsal';const cfg=AVMAP[id]||AV
     const n0=B.children.length;const col=new THREE.Mesh(new THREE.TorusGeometry(.26,.04,6,20),IVORY);col.rotation.x=PI/2;col.position.y=.3;col.scale.set(1.3,1.3,1);B.add(col);
     A.garb=B.children.slice(n0);A.gat=makeGat(head,.42,.78,-.1);A.hop=true;avatarBook(A,.5,-.62);A.h=1.95;
     A.fit={y0:.24,y1:.66,r1:.55,r0:.4,neck:.62,bird:true,cy:.68,br:.54};A.headR=.52;A.headS=[1,.95,.95];}
+  softenAvatar(A);
   A.setFace=function(expr){if(!A.face||A.expr===expr)return;A.expr=expr;A.face.material.map=faceTex(cfg,expr);};
   if(typeof applyLook==='function'&&look)applyLook(A,look);
   return A;}
