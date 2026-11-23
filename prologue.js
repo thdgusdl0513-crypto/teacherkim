@@ -83,7 +83,20 @@ function chr(src,emo,st,cls){return `<div class="chr ${cls||''}" style="${st}">$
 function pages(){const S=(typeof ST!=='undefined')?ST:{};const me=img('av',S.avatar||'girl'),hae=img('pet','haetae'),c1=img('av','cat-white'),c2=img('av','corgi'),c3=img('av','frog'),nick=S.nick||'새내기';
   const H=(st,cls)=>chr(hae,'🦁',st,cls),M=(st,cls)=>chr(me,'🧑‍🎓',st,cls);
   const conf=Array.from({length:18},(_,i)=>`<i class="conf" style="left:${(i*37)%96+2}%;background:${['#c4384a','#f2c84b','#3f9a6a','#4a8ac8','#e88a4a','#8a5ab8'][i%6]};--d:${(i*0.17)%2.6}s"></i>`).join('');
-  return [
+  const CSP=CLS?[
+  // 0. 먼저 꼭! 상담 신청
+  `<div class="pn"><div class="wall" style="background:linear-gradient(#fff1d6,#ffd9b8)"></div><div class="stone"></div>
+    <div class="cap">📢 먼저 꼭 알아 둬요!</div><div class="ui glow" style="right:6%;top:14%">☰</div><div class="fing" style="right:16%;top:24%">👆</div>
+    ${H('--w:110px;left:8%;bottom:12%','bounce')}
+    <div class="bub" style="left:30%;bottom:40%;--d:.4s;--tx:20%;--o:20% 100%">선생님과 이야기하고 싶을 땐<br><b>☰ → 💬 상담 신청</b>!</div></div>
+   <div class="pn"><div class="wall"></div><div class="cap">💬 상담 신청은 이렇게</div>
+    <div style="position:absolute;left:6%;right:6%;top:18%;display:flex;flex-direction:column;gap:8px;z-index:3;font-size:15px">
+      <div style="background:#fff;border:3px solid #2a1c14;border-radius:12px;padding:6px 10px">① 학번 <b>4자리</b>(예: 1701) · 이름 · 비번 4자리</div>
+      <div style="background:#fff;border:3px solid #2a1c14;border-radius:12px;padding:6px 10px">② 편한 시간을 <b>톡!</b></div>
+      <div style="background:#fde8d4;border:3px solid #2a1c14;border-radius:12px;padding:6px 10px">③ <b>신청하기</b> → 선생님이 보면 <b>확정 ✓</b></div></div>
+    ${M('--w:92px;right:6%;bottom:6%','bounce')}
+    <div class="bub" style="left:6%;bottom:8%;--d:1.2s;--tx:80%;--o:90% 100%">학당 안에서<br>바로 신청하면 돼요!</div></div>`]:[];
+  return [...CSP,
   // 1. 첫 등교
   `<div class="pn"><div class="sky"></div>${[12,38,62,86].map((x,i)=>`<i class="lan" style="left:${x}%;animation-delay:${i*.3}s"></i>`).join('')}
     <div class="title">${NAME}<small>입학 안내서 · 제1화</small></div><div class="stone"></div>
@@ -149,7 +162,7 @@ try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}catch(e){}
 const VP={hae:{pitch:1.45,rate:1.08},me:{pitch:1.15,rate:1.02},fr:{pitch:1.6,rate:1.12},nar:{pitch:1.0,rate:1.0}};
 function sayLines(lines){try{speechSynthesis.cancel();}catch(e){return;}if(!VOICE.on||!window.speechSynthesis)return;
   lines.forEach(([who,t])=>{const u=new SpeechSynthesisUtterance(t.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,'').replace(/[~…]/g,' '));u.lang='ko-KR';if(VOICE.v)u.voice=VOICE.v;const P=VP[who]||VP.nar;u.pitch=P.pitch;u.rate=P.rate;u.volume=1;speechSynthesis.speak(u);});}
-function script(){const S=(typeof ST!=='undefined')?ST:{};const nick=S.nick||'새내기';return [
+function script(){const S=(typeof ST!=='undefined')?ST:{};const nick=S.nick||'새내기';return [...(CLS?[[['hae',`${nick}, 먼저 꼭 알아 둘 게 있어! 선생님과 이야기하고 싶을 땐, 오른쪽 위 메뉴에서 상담 신청을 눌러.`],['hae','학번 네 자리랑 이름, 비밀번호 네 자리를 쓰고, 편한 시간을 톡 고른 다음 신청하기!'],['me','선생님이 확인하면 확정으로 바뀌는구나!']]]:[]),
   [['hae',`${nick}, 왔구나! 난 학당 문지기 해태야.`],['me','아직 아무것도 모르는데요?'],['hae',`괜찮아! ${NAME} 구경, 내가 시켜 줄게.`]],
   [['hae','가고 싶은 바닥을 톡! 누르면 거기로 걸어가.'],['hae','꾹 누르고 끌면 시점이 빙글빙글. 두 손가락이면 확대랑 축소!']],
   [['hae','강의실이나 도서관 의자에 앉으면 집중 타이머가 시작돼.'],['hae','머리 위 유리 시계는 친구들도 같이 볼 수 있어.'],['hae','다 했으면 기록하고 일어나기! 오늘 공부가 기록장에 쏙 들어가.']],

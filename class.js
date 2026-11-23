@@ -110,7 +110,7 @@ function renderCounsel(fromLoad){const el=$('#csBody');if(!el)return;const u=rsv
   el.innerHTML=`<div class="csIntro">무슨 이야기든 괜찮아요 🌱 시간을 고르고 <b>신청</b>만 누르면 돼요.<br><small>선생님이 확인하면 여기서 ‘확정’으로 바뀌어요.</small></div>
   ${mineAct.length?`<div class="cStep">📋 내 신청</div>${mineAct.map(r=>`<div class="cMine"><div><b>${esc(csWhen(r))}</b>${r.slot?` <small>${esc(r.slot)}</small>`:''}${r.note?`<br><small>선생님: ${esc(r.note)}</small>`:''}</div><span class="cSt ${stc(r.status)}">${esc(stt(r.status))}</span>${r.status==='대기'||r.status==='승인'?`<button data-cscancel="${esc(r.id)}">취소</button>`:''}</div>`).join('')}`:''}
   <div class="cStep">① 나는 누구?<small>처음 한 번만 쓰면 다음부터 자동으로 채워져요</small></div>
-  <div class="cRow3"><input id="csNo" inputmode="numeric" maxlength="6" placeholder="학번" value="${esc(keep.csNo??m.no)}"><input id="csName" maxlength="10" placeholder="이름" value="${esc(keep.csName??m.name)}"><input id="csPin" inputmode="numeric" maxlength="4" placeholder="비번 4자리" value="${esc(keep.csPin??m.pin)}"></div>
+  <div class="cRow3"><input id="csNo" inputmode="numeric" maxlength="4" placeholder="학번 (예: 1701)" value="${esc(keep.csNo??m.no)}"><input id="csName" maxlength="10" placeholder="이름" value="${esc(keep.csName??m.name)}"><input id="csPin" inputmode="numeric" maxlength="4" placeholder="비번 4자리" value="${esc(keep.csPin??m.pin)}"></div>
   <div class="empty" style="margin:4px 0 0;font-size:12px">비번은 내가 정하는 숫자 4자리예요. 내 신청을 확인·취소할 때 써요.</div>
   <div class="cStep">② 언제 만날까요?<small>편한 시간을 눌러요</small></div>
   ${CS.err?`<div class="cMsg">${esc(CS.err)}</div>`:''}
@@ -121,7 +121,7 @@ function renderCounsel(fromLoad){const el=$('#csBody');if(!el)return;const u=rsv
   <details style="margin-top:6px"><summary style="font-size:13px;color:var(--ink2);cursor:pointer">📬 결과를 메일로도 받고 싶어요 (선택)</summary><input id="csMail" type="email" maxlength="100" placeholder="이메일 주소" value="${esc(keep.csMail??(m.email||''))}" style="margin-top:6px"></details>
   <button class="primary cGo" id="csGo" ${CS.busy?'disabled':''}>${CS.busy?'보내는 중…':'💬 상담 신청하기'}</button><div class="cMsg" id="csMsg"></div>`;}
 async function csSubmit(){const v=id=>($('#'+id)||{}).value||'';const no=v('csNo').trim(),name=v('csName').trim(),pin=v('csPin').trim(),email=v('csMail').trim();const say=t=>{const e=$('#csMsg');if(e)e.textContent=t;};
-  if(!/^\d{1,6}$/.test(no))return say('① 학번을 숫자로 써 주세요');if(!name)return say('① 이름을 써 주세요');if(!/^\d{4}$/.test(pin))return say('① 비번은 숫자 4자리로 정해 주세요');if(!CS.pick)return say('② 만날 시간을 눌러 골라 주세요');
+  if(!/^\d{4}$/.test(no))return say('① 학번은 숫자 4자리로 써 주세요 (예: 1701)');if(!name)return say('① 이름을 써 주세요');if(!/^\d{4}$/.test(pin))return say('① 비번은 숫자 4자리로 정해 주세요');if(!CS.pick)return say('② 만날 시간을 눌러 골라 주세요');
   const topic=[CS.chips.join(' '),v('csTopic').trim()].filter(Boolean).join(' · ').slice(0,200);LS.set('csMe',{no,name,pin,email});
   CS.busy=true;renderCounsel(true);try{await rsvCall({action:'reserve',slotId:CS.pick,no,name,pin,topic,email});CS.pick='';CS.chips=[];const t=$('#csTopic');if(t)t.value='';toast('💬 상담 신청 완료!<small>선생님이 확인하면 ‘확정’으로 바뀌어요</small>');try{chime();}catch(e){}CS.busy=false;await csLoad(true);}
   catch(e){CS.busy=false;renderCounsel(true);const e2=$('#csMsg');if(e2)e2.textContent=e.message;if(/이미 신청/.test(e.message))csLoad(true);}}
