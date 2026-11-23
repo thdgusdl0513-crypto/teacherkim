@@ -36,7 +36,13 @@ const FACES=[['base','🙂','기본'],['smile','😊','웃음'],['joy','🤩','�
 
 /* ---------- drawn faces ---------- */
 const FACE_CACHE={};
-function faceTex(cfg,expr){if(cfg.dragonStyle)return dragonFaceArt(cfg,expr);const key=cfg.id+'|'+expr;if(FACE_CACHE[key])return FACE_CACHE[key];
+function faceTex(cfg,expr){
+  if(cfg.dragonStyle||cfg.type==='dino'){
+    const key='clean-face:'+cfg.id;
+    if(!FACE_CACHE[key]){const c=document.createElement('canvas');c.width=c.height=4;FACE_CACHE[key]=new THREE.CanvasTexture(c);}
+    return FACE_CACHE[key];
+  }
+  const key=cfg.id+'|'+expr;if(FACE_CACHE[key])return FACE_CACHE[key];
   const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.lineCap=g.lineJoin='round';
   const K=cfg.type==='dino'?'turtle':cfg.type==='human'?'human':cfg.type==='beast'?cfg.sp:cfg.type==='pet'?cfg.k:cfg.type;
   const ink=K==='human'?'#2a1c16':'#33241c';const big=K==='human';
@@ -113,6 +119,45 @@ function dragonLine(parent,points,radius,mat){
   parent.add(m);return m;
 }
 function dragonSphere(parent,r,mat,x,y,z,sx=1,sy=1,sz=1){return sph(parent,r,mat,x,y,z,sx,sy,sz);}
+
+/* 검은 점눈 + 복숭아 볼 + 작은 ω 미소: 눈을 별도 3D 표면으로 만들어 프릴/얼굴에 가려지지 않게 한다. */
+function addKawaiiFace(A,head,o){
+  const r=o.r, sx=o.sx||1, sy=o.sy||1, sz=o.sz||1, shift=o.shift||0;
+  const dark=new THREE.MeshBasicMaterial({color:0x30252a});
+  const pink=new THREE.MeshBasicMaterial({color:o.pink||0xf4b1a2,transparent:true,opacity:.88,depthWrite:false});
+  const white=new THREE.MeshBasicMaterial({color:0xffffff});
+  // 원래 머리보다 전방(−Z)으로 배치: 2겹 얼굴인 트리케라톱스도 눈이 보이도록.
+  const surface=(x,y)=>-shift-r*sz*Math.sqrt(Math.max(.10,1-(x/(r*sx))**2-(y/(r*sy))**2));
+  const openEyes=new THREE.Group(),closedEyes=new THREE.Group(); head.add(openEyes,closedEyes);
+  const ex=o.ex||r*.34,ey=o.ey==null?r*.12:o.ey,es=o.eyeSize||r*.087;
+  [-1,1].forEach(s=>{
+    const x=s*ex, z=surface(x,ey)-es*.18;
+    const eye=sph(openEyes,es,dark,x,ey,z,.84,1.2,.50);
+    eye.renderOrder=5;
+    const lidZ=surface(x,ey)-.021;
+    dragonLine(closedEyes,[[x-es*.83,ey,lidZ],[x,ey-es*.25,lidZ-.009],[x+es*.83,ey,lidZ]],es*.17,dark);
+    const cx=s*(o.cheekX||r*.62),cy=o.cheekY==null?-r*.12:o.cheekY;
+    const cheek=sph(head,r*.105,pink,cx,cy,surface(cx,cy)-.013,1.14,.72,.38);
+    cheek.renderOrder=4;
+  });
+  const mouthY=o.mouthY==null?-r*.46:o.mouthY;
+  const mz=o.mouthZ==null?surface(0,mouthY)-.019:o.mouthZ;
+  const k=r*.24;
+  const smile=new THREE.Group(),openMouth=new THREE.Group(),sleepMouth=new THREE.Group();
+  head.add(smile,openMouth,sleepMouth);
+  // 코/콧구멍을 전혀 그리지 않고, 입 하나만 선으로 만든다.
+  dragonLine(smile,[[-k,mouthY,mz],[-k*.52,mouthY-k*.19,mz-.008],[0,mouthY+k*.03,mz-.013],[k*.52,mouthY-k*.19,mz-.008],[k,mouthY,mz]],.0065,dark);
+  const oM=sph(openMouth,k*.27,dark,0,mouthY-.008,mz-.009,.78,1.08,.30);oM.renderOrder=5;
+  dragonLine(sleepMouth,[[-k*.4,mouthY,mz],[k*.4,mouthY,mz]],.0058,dark);
+  const face={set(expr){
+    openEyes.visible=!['blink','sleepy','joy'].includes(expr);
+    closedEyes.visible=!openEyes.visible;
+    smile.visible=!['wow','joy','sleepy','focus'].includes(expr);
+    openMouth.visible=['wow','joy'].includes(expr);
+    sleepMouth.visible=['sleepy','focus'].includes(expr);
+  }};
+  A.kawaiiFace=face;face.set('base');
+}
 function dragonFaceArt(cfg,expr){
   const key='new-dragon:'+cfg.id+'|'+expr;
   if(FACE_CACHE[key])return FACE_CACHE[key];
@@ -179,17 +224,13 @@ function makeDragonAvatar(A,cfg,look){
     const head=new THREE.Group();head.position.set(0,1.12,-.46);B.add(head);A.head=head;
     dragonSphere(head,.34,M,0,0,0,1.16,1.04,1.05);
     A.face=faceDecal(head,.34,cfg,1.16,1.04,1.05);
-    // 뾰족한 부리가 아니라 코끝이 둥글고 넓은 포유류형 주둥이.
-    dragonSphere(head,.19,M,0,-.14,-.31,1.03,.68,1.25);
-    dragonSphere(head,.155,P,0,-.18,-.43,1.08,.55,.82);
+    // 용 얼굴은 하나의 둥근 머리로만. 소처럼 돌출된 코와 볼, 콧구멍을 만들지 않음.
     [-1,1].forEach(s=>{
-      dragonSphere(head,.087,M,s*.29,-.12,-.17,1,.73,1);
       // 삐죽하지 않은 회색 뿔 2쌍
       const horn0=new THREE.Mesh(new THREE.ConeGeometry(.11,.32,12),horn);horn0.position.set(s*.21,.31,.06);horn0.rotation.z=-s*.35;horn0.rotation.x=-.12;head.add(horn0);
       const horn1=new THREE.Mesh(new THREE.ConeGeometry(.06,.18,10),hornLight);horn1.position.set(s*.3,.21,.13);horn1.rotation.z=-s*.65;head.add(horn1);
     });
-    // 이빨 대신 작은 U자 미소.
-    dragonLine(head,[[-.095,-.224,-.555],[-.045,-.25,-.58],[0,-.255,-.587],[.05,-.25,-.58],[.095,-.224,-.555]],.009,ink);
+    addKawaiiFace(A,head,{r:.34,sx:1.16,sy:1.04,sz:1.05,ex:.135,ey:.045,eyeSize:.029,mouthY:-.175,pink:0xffb4ac});
     // 둥근 등 가시와 짧은 유연한 꼬리.
     for(let k=0;k<3;k++){
       const sp=new THREE.Mesh(new THREE.ConeGeometry(.072-k*.006,.14,9),horn);
@@ -213,10 +254,8 @@ function makeDragonAvatar(A,cfg,look){
     const head=new THREE.Group();head.position.set(-.08,1.53,-.30);B.add(head);A.head=head;
     dragonSphere(head,.275,M,0,0,0,1.02,1.0,.94);
     A.face=faceDecal(head,.275,cfg,1.02,1.0,.94);
-    dragonSphere(head,.14,M,0,-.13,-.24,1.05,.66,1.32);
-    dragonSphere(head,.13,P,0,-.164,-.32,1.02,.54,.95);
+    // 주둥이를 벌크업하지 않고 머리 자체에 귀여운 표정만 얹음.
     [-1,1].forEach(s=>{
-      dragonSphere(head,.065,M,s*.21,-.08,-.115,1,.75,1);
       // 짧고 가지 친 부드러운 뿔; 귀의 소용돌이.
       dragonLine(head,[[s*.17,.22,.04],[s*.22,.34,.06],[s*.29,.41,.07]],.021,horn);
       dragonLine(head,[[s*.22,.32,.06],[s*.14,.38,.08]],.015,hornLight);
@@ -225,7 +264,7 @@ function makeDragonAvatar(A,cfg,look){
       // 꼬리털이 아니라 가늘고 둥글게 뻗는 용 수염.
       dragonLine(head,[[s*.13,-.16,-.27],[s*.28,-.22,-.27],[s*.4,-.19,-.24]],.012,hornLight);
     });
-    dragonLine(head,[[-.075,-.21,-.445],[-.035,-.236,-.45],[0,-.24,-.46],[.036,-.236,-.45],[.075,-.21,-.445]],.008,ink);
+    addKawaiiFace(A,head,{r:.275,sx:1.02,sy:1,sz:.94,ex:.103,ey:.037,eyeSize:.025,mouthY:-.142,pink:0xffb6ab});
     // 작은 손 2개 (입체적인 앞발)
     [-1,1].forEach((s,i)=>{
       const arm=new THREE.Group();arm.position.set(s*.225,.79,-.26);B.add(arm);
@@ -248,7 +287,7 @@ function makeDragonAvatar(A,cfg,look){
     A.headR=.275;A.headS=[1.02,1,.94];
   }
   // 기존 전체 캐릭터 공용 표정 기능에 연결.
-  A.setFace=function(expr){if(!A.face||A.expr===expr)return;A.expr=expr;A.face.material.map=faceTex(cfg,expr);};
+  A.setFace=function(expr){if(!A.face||A.expr===expr)return;A.expr=expr;if(A.kawaiiFace)A.kawaiiFace.set(expr);else A.face.material.map=faceTex(cfg,expr);};
   return A;
 }
 
@@ -310,6 +349,10 @@ function makeDinoAvatar(A,cfg){
  dragonLine(tail,bend,brachio?.105:.13,M);
  if(anky)round(tail,.17,spine,.23,.23,.7,1.4,.9,.95);
  if(stego){ for(let i=0;i<3;i++){const tip=new THREE.Mesh(new THREE.ConeGeometry(.035,.2,7),bone);tip.rotation.z=.5;tip.position.set(.17+i*.05,.2,.54+i*.06);tail.add(tip);}}
+ // 각 공룡의 얼굴은 정면에 따로 돌출된 검은 점눈으로 제작해 프릴에 가리지 않음.
+ addKawaiiFace(A,head,{r,sx:1.09,sy:brachio?1:1.02,sz:1.02,shift:trike?.05:0,
+   ex:r*(trike?.36:.35),ey:r*(trike?.18:.13),eyeSize:r*.089,
+   mouthY:-r*.46,mouthZ:-(r*.88+r*.4*.75+.02),pink:0xf6b3a6});
  // 간단한 전통 책가방, 걷기/앉기/표정/프로필 썸네일과 공통 작동.
  A.h=brachio?2.25:1.75;A.waddle=.045;A.hop=false;A.headR=r;A.headS=[1.09,1.02,1.02];
  avatarBook(A,brachio?1.18:.7,-.68);
@@ -422,7 +465,7 @@ function makeAvatar(id,look){if(id==='shiba')id='sapsal';const cfg=AVMAP[id]||AV
     const n0=B.children.length;const col=new THREE.Mesh(new THREE.TorusGeometry(.26,.04,6,20),IVORY);col.rotation.x=PI/2;col.position.y=.3;col.scale.set(1.3,1.3,1);B.add(col);
     A.garb=B.children.slice(n0);A.gat=makeGat(head,.42,.78,-.1); if(cfg.crane)A.gat.position.y=.34; if(cfg.duck)A.gat.position.y=.36; A.hop=true;avatarBook(A,.5,-.62);A.h=cfg.crane?2.08:(cfg.duck?1.82:(cfg.peacock?1.92:1.95));
     A.fit={y0:.24,y1:.66,r1:.55,r0:.4,neck:.62,bird:true,cy:.68,br:.54};A.headR=.52;A.headS=[1,.95,.95];}
-  A.setFace=function(expr){if(!A.face||A.expr===expr)return;A.expr=expr;A.face.material.map=faceTex(cfg,expr);};
+  A.setFace=function(expr){if(!A.face||A.expr===expr)return;A.expr=expr;if(A.kawaiiFace)A.kawaiiFace.set(expr);else A.face.material.map=faceTex(cfg,expr);};
   if(typeof applyLook==='function'&&look)applyLook(A,look);
   return A;}
 function animateAvatar(A,ph,amt,t,sit){const B=A.bob;
