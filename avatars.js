@@ -15,6 +15,11 @@ const AVATARS=[
  {id:'maltese',name:'말티즈',emo:'🐩',type:'beast',sp:'dog',c:0xffffff,b:0xffffff,ear:'flop',tail:'puff',fluffy:true,vest:0xe8a8b8},
  {id:'frog',name:'개구리',emo:'🐸',type:'frog'},
  {id:'turtle',name:'거북이',emo:'🐢',type:'turtle'},
+ {id:'dino',name:'브라키오사우루스',emo:'🦕',type:'dino',species:'brachio',c:0x8acb99,b:0xe7f3cb},
+ {id:'dino-triceratops',name:'트리케라톱스',emo:'🦕',type:'dino',species:'trike',c:0x76bca5,b:0xe5f3d2,dinoVariant:true},
+ {id:'dino-stegosaurus',name:'스테고사우루스',emo:'🦕',type:'dino',species:'stego',c:0xe7ba78,b:0xffe5b8,dinoVariant:true},
+ {id:'dino-tyrannosaurus',name:'티라노사우루스',emo:'🦕',type:'dino',species:'rex',c:0x82c3a1,b:0xe6e0b1,dinoVariant:true},
+ {id:'dino-ankylosaurus',name:'안킬로사우루스',emo:'🦕',type:'dino',species:'anky',c:0xb6ca79,b:0xe5d6a6,dinoVariant:true},
  {id:'bird',name:'흰 오목눈이',emo:'🐦',type:'bird'},
  {id:'crane',name:'학',emo:'🪽',type:'bird',crane:true,bc:0xf9f7f2,lc:0x22252c,beak:'#2e2a24',crest:0xcf2e2e},
  {id:'duck',name:'오리',emo:'🦆',type:'bird',duck:true,bc:0xfcfbf5,lc:0xf28a2a,beak:'#ef8a2c'},
@@ -33,7 +38,7 @@ const FACES=[['base','🙂','기본'],['smile','😊','웃음'],['joy','🤩','�
 const FACE_CACHE={};
 function faceTex(cfg,expr){if(cfg.dragonStyle)return dragonFaceArt(cfg,expr);const key=cfg.id+'|'+expr;if(FACE_CACHE[key])return FACE_CACHE[key];
   const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.lineCap=g.lineJoin='round';
-  const K=cfg.type==='human'?'human':cfg.type==='beast'?cfg.sp:cfg.type==='pet'?cfg.k:cfg.type;
+  const K=cfg.type==='dino'?'turtle':cfg.type==='human'?'human':cfg.type==='beast'?cfg.sp:cfg.type==='pet'?cfg.k:cfg.type;
   const ink=K==='human'?'#2a1c16':'#33241c';const big=K==='human';
   const bk=cfg.crane?'crane':cfg.duck?'duck':cfg.mandarin?'mandarin':cfg.peacock?'peacock':cfg.phoenix?'phoenix':'bird';
   let ex={human:40,cat:36,dog:36,frog:46,turtle:34,bird:24,dragon:30,totem:44,goblin:38}[K],ey={human:132,cat:122,dog:118,frog:104,turtle:124,bird:118,dragon:116,totem:108,goblin:124}[K],er;
@@ -137,7 +142,7 @@ function makeDragonAvatar(A,cfg,look){
   const main=lookPick(look,'av',cfg.c),light=lookPick(look,'av2',cfg.b);
   const M=fur(main),P=fur(light),ink=std(0x554451),blush=std(0xf3aaa8),white=std(0xfffaf1);
   const horn=std(west?0x777781:new THREE.Color(light).lerp(new THREE.Color(0xffffff),.3).getHex()),hornLight=std(west?0xaaaaaf:new THREE.Color(light).lerp(new THREE.Color(0xffffff),.65).getHex());
-  const nose=std(0x5a5053),claw=std(0xfff4e6);
+  const claw=std(0xfff4e6);
   // 용 전용 얼굴을 투명한 앞면으로 구현. 날카로운 삼각형 부리를 사용하지 않음.
   if(west){
     // 네 발 달린 새끼 서양용. 낮고 동글납작한 몸통.
@@ -247,10 +252,75 @@ function makeDragonAvatar(A,cfg,look){
   return A;
 }
 
+
+/* 확장 가능한 공룡 종별 3D 모델. 첫 선택지는 목이 긴 브라키오사우루스. */
+function makeDinoAvatar(A,cfg){
+ const B=A.bob,kind=cfg.species||'brachio';
+ const M=fur(cfg.c),P=fur(cfg.b),spine=fur(kind==='stego'?0xbb7b44:kind==='trike'?0x549b82:kind==='anky'?0x88a86a:0x62a88b);
+ const bone=std(0xfff0c6),dark=std(0x4e6256);
+ const round=(parent,r,mat,x,y,z,sx=1,sy=1,sz=1)=>sph(parent,r,mat,x,y,z,sx,sy,sz);
+ // 앞뒤 구분이 있는 통통한 몸통과 네 발. 공룡마다 비율이 서로 다름.
+ const brachio=kind==='brachio',rex=kind==='rex',trike=kind==='trike',stego=kind==='stego',anky=kind==='anky';
+ const body=round(B,.36,M,0,.62,.12,brachio?1.08:1.21,brachio?.84:1.05,brachio?1.42:1.34);
+ round(B,.27,P,0,.57,-.17,1,.86,.6);
+ for(const s of [-1,1])for(const fb of [-1,1]){
+   if(rex&&fb>0)continue;
+   const leg=new THREE.Group(); leg.position.set(s*(brachio?.26:.29),.36,fb>0?.46:-.32);B.add(leg);
+   round(leg,.125,M,0,-.10,0,1,1.45,.96);round(leg,.13,M,0,-.24,-.07,1.13,.54,1.22);
+   [-1,0,1].forEach(i=>round(leg,.027,bone,i*.075,-.25,-.19,1,.65,1.5));
+   A.legs.push({g:leg,ph:(s===fb?0:Math.PI)});
+ }
+ if(rex){ // 뒷다리가 크고 앞발이 조그만 티라노사우루스
+   for(const s of [-1,1]){const arm=new THREE.Group();arm.position.set(s*.29,.83,-.34);B.add(arm);
+    round(arm,.09,M,s*.05,-.09,-.07,.72,1.3,.85);round(arm,.065,M,s*.08,-.2,-.12); A.arms.push({g:arm,ph:0,s});}
+ }
+ // 뾰족한 입 대신 매끄러운 둥근 주둥이 + 한쪽으로 흐르는 미소
+ if(brachio){
+   round(B,.145,M,0,1.21,-.33,.85,3.05,.83);
+   round(B,.125,P,0,1.22,-.44,.66,3.05,.48);
+ }
+ const head=new THREE.Group();head.position.set(0,brachio?1.75:(rex?1.17:1.1),brachio?-.43:-.45);B.add(head);A.head=head;
+ const r=brachio?.26:(trike?.32:.29);
+ round(head,r,M,0,0,0,1.09,brachio?1:1.02,1.02);
+ A.face=faceDecal(head,r,cfg,1.09,brachio?1:1.02,1.02);
+ round(head,r*.4,P,0,-r*.23,-r*.88,1.45,.58,.75);
+ if(trike){ // 부채형 프릴 + 세 개의 작은 아이보리 뿔
+   round(head,.33,spine,0,.16,.15,1.35,1.12,.46);
+   round(head,r,M,0,0,-.05,1.09,1.02,1.02); // 앞얼굴을 프릴보다 앞으로
+   A.face=faceDecal(head,r,cfg,1.09,1.02,1.02,-.015);
+   for(const s of [-1,1]){const h=new THREE.Mesh(new THREE.ConeGeometry(.055,.2,8),bone);
+     h.position.set(s*.19,.28,-.18);h.rotation.z=-s*.16;head.add(h);}
+   const n=new THREE.Mesh(new THREE.ConeGeometry(.045,.16,8),bone);n.rotation.x=-.85;n.position.set(0,-.08,-.30);head.add(n);
+ }
+ if(stego){ // 등에 납작한 잎 모양 판
+   for(let i=0;i<5;i++){
+     const plate=new THREE.Mesh(new THREE.ConeGeometry(.12+.02*Math.sin(i),.28,4),spine);
+     plate.scale.z=.44; plate.position.set(i%2?.05:-.05,.99+Math.sin(i/4*Math.PI)*.07,-.19+i*.24);
+     plate.rotation.x=-.22;B.add(plate);
+   }
+ }
+ if(anky){ // 낮은 등에 둥근 갑옷과 커다란 꼬리 몽둥이
+   for(let i=0;i<12;i++){const x=(-1+i%3)*.23,z=-.15+Math.floor(i/3)*.24;
+     round(B,.075,spine,x,.95+(i%3===1?.04:0),z,1,.44,1.1);}
+ }
+ // 꼬리는 종별로 다른 길이와 끝 모양을 갖는다. 몸통에서 뒤쪽(+)으로 뻗음.
+ const tail=new THREE.Group();tail.position.set(0,.67,.56);B.add(tail);A.tails.push(tail);
+ const bend=brachio?[[0,0,0],[.04,.06,.23],[.13,.15,.47],[.20,.28,.64]]:
+                [[0,0,0],[.05,.04,.23],[.13,.14,.48],[.22,.23,.66]];
+ dragonLine(tail,bend,brachio?.105:.13,M);
+ if(anky)round(tail,.17,spine,.23,.23,.7,1.4,.9,.95);
+ if(stego){ for(let i=0;i<3;i++){const tip=new THREE.Mesh(new THREE.ConeGeometry(.035,.2,7),bone);tip.rotation.z=.5;tip.position.set(.17+i*.05,.2,.54+i*.06);tail.add(tip);}}
+ // 간단한 전통 책가방, 걷기/앉기/표정/프로필 썸네일과 공통 작동.
+ A.h=brachio?2.25:1.75;A.waddle=.045;A.hop=false;A.headR=r;A.headS=[1.09,1.02,1.02];
+ avatarBook(A,brachio?1.18:.7,-.68);
+ // 옷장 색상이나 의상 기하가 공룡의 다리/목을 가리지 않도록 전용 모델 유지.
+ A.fit=null;A.gat=null;
+}
+
 function makeAvatar(id,look){if(id==='shiba')id='sapsal';const cfg=AVMAP[id]||AVATARS[0];const A={id,cfg,garb:[],legWear:[],sleeves:[],root:new THREE.Group(),bob:new THREE.Group(),legs:[],arms:[],tails:[],hop:false,waddle:0,h:2.2,face:null,expr:'base',blinkAt:performance.now()+2000+Math.random()*3000};A.root.add(A.bob);
   const sh=new THREE.Mesh(new THREE.PlaneGeometry(1.2,1.2),new THREE.MeshBasicMaterial({map:TEX.shadow,transparent:true,depthWrite:false}));sh.rotation.x=-PI/2;sh.position.y=.03;A.root.add(sh);
   const B=A.bob;
-  if(cfg.type==='human'){const fem=cfg.fem;const skin=std(0xffe6d2,{emissive:0x4a3428});const shoe=std(0x2a2422);
+  if(cfg.type==='dino'){makeDinoAvatar(A,cfg);} else if(cfg.type==='human'){const fem=cfg.fem;const skin=std(0xffe6d2,{emissive:0x4a3428});const shoe=std(0x2a2422);
     const main=fem?std(0x9fadc2,{emissive:0x1a1e26}):std(0xaebccc,{emissive:0x1c2026});
     [-1,1].forEach((s,i)=>{const g=new THREE.Group();g.position.set(s*.1,.36,0);B.add(g);if(!fem){A.legWear.push(cyl(g,.1,.09,.28,10,std(0xe8e4dc,{emissive:0x302e2a}),0,-.14,0),cyl(g,.075,.075,.05,8,std(0x8a96aa),0,-.27,0));}sph(g,.08,shoe,0,-.33,-.03,1,.6,1.45);A.legs.push({g,ph:i?PI:0});});
     const n0=B.children.length;
