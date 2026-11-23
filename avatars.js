@@ -370,12 +370,55 @@ function makeDinoAvatar(A,cfg,look){
  * A.head / A.arms / A.legs / A.tails / A.fit / A.garb remain wardrobe & emotes compatible.
  * This is an original, warm storybook-clay character system, not an asset copy.
  */
+
 const SD_FACE_CACHE=Object.create(null),SD_SHIRT_CACHE=Object.create(null);
-function sdMat(hex,extra){
-  const c=new THREE.Color(hex==null?0xf5e8d8:hex);
-  return new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.86,metalness:0},extra||{}));
+const SD_FELT_BUMP=(function(){
+  const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');
+  g.fillStyle='#808080';g.fillRect(0,0,256,256);
+  for(let i=0;i<4200;i++){
+    const x=rnd()*256,y=rnd()*256,r=.4+rnd()*2.8,a=.03+rnd()*.07;
+    const tone=128+(rnd()-.5)*42;g.fillStyle=`rgba(${tone},${tone},${tone},${a})`;
+    g.beginPath();g.arc(x,y,r,0,PI*2);g.fill();
+  }
+  for(let i=0;i<1200;i++){
+    const x=rnd()*256,y=rnd()*256,len=2+rnd()*6;g.strokeStyle=`rgba(255,255,255,${.02+rnd()*.04})`;
+    g.lineWidth=.8+rnd()*.8;g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(rnd()*PI*2)*len,y+Math.sin(rnd()*PI*2)*len);g.stroke();
+  }
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(2,2);t.needsUpdate=true;return t;
+})();
+function sdWarmPastel(hex,satUp=.10,lightUp=.12){
+  const c=new THREE.Color(hex==null?0xf5e8d8:hex),hsl={h:0,s:0,l:0};c.getHSL(hsl);
+  c.setHSL(hsl.h,Math.min(.95,hsl.s*(1+satUp)+.03),Math.min(.92,hsl.l+lightUp));
+  return c.getHex();
 }
-function sdSoftColor(hex,amt=.10){const c=new THREE.Color(hex);c.lerp(new THREE.Color(0xe8ddcb),amt);return c.getHex();}
+function sdMat(hex,extra){
+  const col=new THREE.Color(hex==null?0xf5e8d8:hex);
+  const emissive=col.clone().lerp(new THREE.Color(0xfff2e3),.22).multiplyScalar(.15);
+  const material=new THREE.MeshPhysicalMaterial(Object.assign({
+    color:col,
+    roughness:.92,
+    metalness:0,
+    bumpMap:SD_FELT_BUMP,
+    bumpScale:.015,
+    emissive,
+    emissiveIntensity:.15
+  },extra||{}));
+  // The existing site loads THREE r128: sheen is a Color in that release.
+  // Newer releases use numeric sheen + sheenColor + sheenRoughness.
+  // Keep both paths so old websites render instead of throwing in shaders.
+  if('sheenRoughness' in material){
+    material.sheen=.7;
+    material.sheenColor=new THREE.Color(0xf8efe2);
+    material.sheenRoughness=.85;
+  }else if('sheen' in material){
+    material.sheen=new THREE.Color(0xf8efe2).multiplyScalar(.7);
+  }
+  return material;
+}
+function sdSoftColor(hex,amt=.10){
+  const warm=sdWarmPastel(hex,Math.max(.04,amt*.8),.11+amt*.09);
+  return new THREE.Color(warm).lerp(new THREE.Color(0xfff3e3),amt*.18).getHex();
+}
 function sdBall(p,r,material,x=0,y=0,z=0,sx=1,sy=1,sz=1){
   const m=new THREE.Mesh(new THREE.SphereGeometry(r,32,24),material);
   m.position.set(x,y,z);m.scale.set(sx,sy,sz);p.add(m);return m;
@@ -394,12 +437,13 @@ function sdShirtTexture(cfg){
   if(SD_SHIRT_CACHE[key])return SD_SHIRT_CACHE[key];
   const c=document.createElement('canvas');c.width=256;c.height=256;
   const g=c.getContext('2d');
-  const a=cfg.type==='dino'?'#f4e9d3':cfg.type==='bird'?'#f3ecdb':cfg.sp==='dragon'?'#f6eadc':'#eee7d9';
-  const b=cfg.type==='dino'?'#a7c4ac':cfg.type==='bird'?'#c6bb9d':cfg.sp==='dragon'?'#deb3ad':'#b2bcb2';
+  const a=cfg.type==='dino'?'#fbf1df':cfg.type==='bird'?'#faf2e5':cfg.sp==='dragon'?'#fbe8dd':'#f7efe4';
+  const b=cfg.type==='dino'?'#adcdb5':cfg.type==='bird'?'#d8c8ab':cfg.sp==='dragon'?'#e7beb8':'#c2cab9';
   g.fillStyle=a;g.fillRect(0,0,256,256);
-  g.fillStyle=b;for(let y=10;y<256;y+=40){g.globalAlpha=.55;g.fillRect(0,y,256,12);}
-  g.globalAlpha=1;g.strokeStyle='rgba(92,78,70,.07)';g.lineWidth=1;
+  g.fillStyle=b;for(let y=14;y<256;y+=42){g.globalAlpha=.58;g.fillRect(0,y,256,11);}g.globalAlpha=1;
+  g.strokeStyle='rgba(108,90,79,.06)';g.lineWidth=1;
   for(let x=0;x<256;x+=13){g.beginPath();g.moveTo(x,0);g.lineTo(x,256);g.stroke();}
+  for(let y=0;y<256;y+=18){g.strokeStyle='rgba(255,255,255,.05)';g.beginPath();g.moveTo(0,y+.5);g.lineTo(256,y+.5);g.stroke();}
   const tex=new THREE.CanvasTexture(c);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
   tex.repeat.set(1,1);tex.needsUpdate=true;
   SD_SHIRT_CACHE[key]=tex;return tex;
@@ -412,52 +456,94 @@ function sdPear(p,mat,location,scale){
   const mesh=new THREE.Mesh(new THREE.LatheGeometry(points,32),mat);
   mesh.position.set(...location);mesh.scale.set(...scale);p.add(mesh);return mesh;
 }
-function sdProfile(cfg){
-  const bird=cfg.type==='bird', dino=cfg.type==='dino';
-  return {headR:bird?.46:(cfg.species==='trike'?.48:.445),
-    bodyWidth:cfg.species==='anky'?1.16:(cfg.duck?1.14:1),
-    bodyHeight:cfg.crane?1.10:(cfg.species==='rex'?1.04:1),
-    headLift:(cfg.species==='brachio'?.29:(cfg.crane?.15:(cfg.dragonStyle==='east'?.13:0))),
-    headZ:cfg.species==='brachio'?-.15:0,
-    isWing:bird};
+function sdLathePart(p,points,mat,x=0,y=0,z=0,sx=1,sy=1,sz=1,rx=0,ry=0,rz=0){
+  const geom=new THREE.LatheGeometry(points.map(q=>new THREE.Vector2(q[0],q[1])),26);
+  const mesh=new THREE.Mesh(geom,mat);
+  mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.rotation.set(rx,ry,rz);p.add(mesh);return mesh;
 }
+function sdFootShape(p,mat,x=0,y=0,z=0,flip=1){
+  return sdLathePart(p,[[0,0],[.05,.02],[.10,.08],[.16,.16],[.17,.24],[.14,.31],[.07,.34],[0,.34]],mat,x,y,z,1.18,.88,1.55,PI/2,0,0);
+}
+function sdCollarRing(p,mat,x,y,z,rx=.22,ry=.07,rz=.18){
+  const ring=sdLathePart(p,[[0,0],[.03,.01],[.045,.03],[.05,.05],[.045,.07],[.03,.09],[0,.10]],mat,x,y,z,rx,ry,rz,PI/2,0,0);ring.name='collar';return ring;
+}
+
+function sdProfile(cfg){
+  const P={
+    headR:.445,bodyWidth:1,bodyHeight:1,headLift:0,headZ:0,isWing:false,
+    armX:.35,armY:.99,armZ:-.02,armRot:.31,legX:.18,legY:.43,tailY:.63,tailZ:.30,
+    headScale:[1.05,1.0,1.0]
+  };
+  if(cfg.type==='human')return P;
+  if(cfg.sp==='cat')return Object.assign(P,{headR:.47,bodyWidth:.96,bodyHeight:.95,headScale:[1.16,.97,1.0],armY:.95,legY:.41,tailY:.67});
+  if(cfg.sp==='dog')return Object.assign(P,{headR:.485,bodyWidth:1.02,bodyHeight:.98,headScale:[1.08,.98,1.10],armX:.37,armY:.97,legX:.19,tailY:.68});
+  if(cfg.type==='frog')return Object.assign(P,{headR:.48,bodyWidth:1.02,bodyHeight:.86,headScale:[1.18,.94,.98],armX:.33,armY:.90,legX:.19,legY:.39,tailY:.60});
+  if(cfg.type==='turtle')return Object.assign(P,{headR:.40,bodyWidth:1.14,bodyHeight:.82,headLift:-.02,headScale:[1.04,.92,.96],armX:.39,armY:.86,legX:.22,legY:.37,tailY:.58,tailZ:.36});
+  if(cfg.type==='bird'){
+    if(cfg.crane)return Object.assign(P,{headR:.38,bodyWidth:.84,bodyHeight:.96,headLift:.24,headZ:-.02,headScale:[.98,1.02,.94],armX:.30,armY:.95,legX:.13,legY:.39,tailY:.66});
+    if(cfg.duck)return Object.assign(P,{headR:.42,bodyWidth:1.10,bodyHeight:.88,headLift:.03,headScale:[1.12,.95,1.02],armX:.34,armY:.90,legX:.16,legY:.37,tailY:.63});
+    if(cfg.mandarin)return Object.assign(P,{headR:.43,bodyWidth:1.08,bodyHeight:.92,headLift:.03,headScale:[1.06,.97,1.0],armX:.34,armY:.92,legX:.16,legY:.38,tailY:.65});
+    if(cfg.peacock)return Object.assign(P,{headR:.44,bodyWidth:.98,bodyHeight:.96,headLift:.05,headScale:[1.0,1.0,.98],armX:.33,armY:.95,legX:.15,legY:.40,tailY:.75,tailZ:.36});
+    if(cfg.phoenix)return Object.assign(P,{headR:.45,bodyWidth:1.0,bodyHeight:.98,headLift:.07,headScale:[1.02,1.0,.98],armX:.33,armY:.95,legX:.15,legY:.39,tailY:.74,tailZ:.34});
+    return Object.assign(P,{headR:.44,bodyWidth:.90,bodyHeight:.84,headLift:.02,headScale:[1.02,.98,.96],armX:.30,armY:.88,legX:.14,legY:.36,tailY:.61});
+  }
+  if(cfg.type==='dino'){
+    if(cfg.species==='brachio')return Object.assign(P,{headR:.39,bodyWidth:1.14,bodyHeight:.92,headLift:.34,headZ:-.18,headScale:[.94,.95,.96],armX:.34,armY:.87,legX:.21,legY:.38,tailY:.64,tailZ:.34});
+    if(cfg.species==='rex')return Object.assign(P,{headR:.50,bodyWidth:1.08,bodyHeight:1.02,headLift:.08,headZ:-.08,headScale:[1.15,1.0,1.18],armX:.30,armY:.93,legX:.20,legY:.42,tailY:.69,tailZ:.34});
+    if(cfg.species==='trike')return Object.assign(P,{headR:.47,bodyWidth:1.13,bodyHeight:.92,headLift:.02,headZ:-.10,headScale:[1.12,1.0,1.14],armX:.33,armY:.90,legX:.22,legY:.39,tailY:.64,tailZ:.34});
+    if(cfg.species==='stego')return Object.assign(P,{headR:.43,bodyWidth:1.14,bodyHeight:.92,headLift:.02,headZ:-.07,headScale:[1.0,.98,1.08],armX:.34,armY:.91,legX:.22,legY:.39,tailY:.66,tailZ:.36});
+    if(cfg.species==='anky')return Object.assign(P,{headR:.42,bodyWidth:1.18,bodyHeight:.88,headLift:-.01,headZ:-.06,headScale:[1.02,.95,1.06],armX:.34,armY:.88,legX:.23,legY:.36,tailY:.60,tailZ:.38});
+    return Object.assign(P,{bodyWidth:1.12,bodyHeight:.94});
+  }
+  if(cfg.sp==='dragon'){
+    if(cfg.dragonStyle==='west')return Object.assign(P,{headR:.47,bodyWidth:.97,bodyHeight:.98,headLift:.09,headZ:-.09,headScale:[1.12,1.0,1.12],armX:.34,armY:.95,legX:.18,legY:.41,tailY:.68,tailZ:.34});
+    return Object.assign(P,{headR:.43,bodyWidth:1.02,bodyHeight:.92,headLift:.14,headZ:-.11,headScale:[1.03,.98,1.10],armX:.34,armY:.93,legX:.18,legY:.40,tailY:.69,tailZ:.34});
+  }
+  return P;
+}
+
 function buildSDBase(A,cfg,look){
   const B=A.bob,profile=sdProfile(cfg);
   const skinBase=cfg.type==='human'?0xf4dcca:(cfg.bc!=null?cfg.bc:(cfg.dark?0x647e79:(cfg.c!=null?cfg.c:(cfg.type==='frog'?0x8abf81:(cfg.type==='bird'?0xf6f1e9:0xa5cb9a)))));
   const chosen=(cfg.dragonColor||cfg.type==='dino')?lookPick(look,'av',skinBase):skinBase;
-  const skin=sdMat(sdSoftColor(chosen,.09));
+  const skin=sdMat(sdSoftColor(chosen,.11));
   const body=new THREE.Group();body.name='body';B.add(body);
-  const core=sdPear(body,skin,[0,.39,.015],[profile.bodyWidth,profile.bodyHeight,1]);
-  // Default striped knit is its own mesh so applyLook() can hide it for custom outfits.
-  const shirt=sdPear(body,sdMat(0xffffff,{map:sdShirtTexture(cfg),side:THREE.DoubleSide}),[0,.405,-.007],
-    [profile.bodyWidth*1.025,profile.bodyHeight*.79,1.035]);
+  const core=sdPear(body,skin,[0,.38,.015],[profile.bodyWidth,profile.bodyHeight,1.02]);
+  const shirtMat=sdMat(0xffffff,{map:sdShirtTexture(cfg),side:THREE.DoubleSide,emissive:new THREE.Color(0xfff5ea),emissiveIntensity:.16});
+  const shirt=sdLathePart(body,
+    [[0,0],[.145,.03],[.26,.10],[.325,.23],[.34,.38],[.328,.56],[.28,.73],[.2,.84],[.1,.89],[0,.90]],
+    shirtMat,0,.40,-.01,profile.bodyWidth*1.04,profile.bodyHeight*.82,1.05);
   shirt.name='defaultShirt';A.garb.push(shirt);
+  const hem=sdCollarRing(body,shirtMat,0,.46,.01,.39*profile.bodyWidth,.08,.27);hem.name='hem';A.garb.push(hem);
+  const collar=sdCollarRing(body,shirtMat,0,1.08,-.11,.23,.07,.19);A.garb.push(collar);
   const arms=[],legs=[];
   for(const s of [-1,1]){
-    const arm=new THREE.Group();arm.name=s<0?'leftArm':'rightArm';arm.position.set(s*.32,.98,-.015);B.add(arm);
-    sdBall(arm,.135,skin,s*.012,-.13,-.005,.92,1.38,.98);
-    sdBall(arm,.105,skin,s*.03,-.28,-.01,1.05,.65,1.03);
-    const sleeve=sdBall(arm,.129,sdMat(0xf1ebd9),0,-.105,0,1.02,.92,1.02);sleeve.name='sleeve';A.sleeves.push(sleeve);
-    A.arms.push({g:arm,s,ph:s>0?0:PI,wing:false});arms.push(arm);
-    const leg=new THREE.Group();leg.name=s<0?'leftLeg':'rightLeg';leg.position.set(s*.18,.40,0);B.add(leg);
-    sdBall(leg,.145,skin,0,-.13,-.01,.96,1.28,1.06);
-    sdBall(leg,.15,skin,0,-.30,-.095,1.13,.58,1.32);
+    const arm=new THREE.Group();arm.name=s<0?'leftArm':'rightArm';arm.position.set(s*profile.armX,profile.armY,profile.armZ);arm.rotation.z=-s*profile.armRot;B.add(arm);
+    sdLathePart(arm,[[0,0],[.055,.015],[.095,.09],[.11,.23],[.105,.40],[.084,.54],[.05,.62],[0,.66]],skin,s*.015,-.14,-.01,.92,1.02,1.0,0,0,s*.06);
+    sdLathePart(arm,[[0,0],[.05,.015],[.09,.09],[.10,.20],[.095,.31],[.07,.42],[.042,.50],[0,.53]],skin,s*.045,-.34,-.03,.92,.96,.98,0,0,s*.12);
+    const paw=sdFootShape(arm,skin,s*.06,-.43,-.10,s);paw.scale.set(1.0,.72,1.08);
+    const sleeve=sdLathePart(arm,[[0,0],[.065,.015],[.108,.08],[.116,.16],[.108,.24],[.078,.30],[.04,.34],[0,.35]],shirtMat,s*.01,-.11,-.002,1.0,.84,1.01,0,0,s*.04);sleeve.name='sleeve';A.sleeves.push(sleeve);
+    A.arms.push({g:arm,s,ph:s>0?0:PI,wing:false,restZ:.31});arms.push(arm);
+    const leg=new THREE.Group();leg.name=s<0?'leftLeg':'rightLeg';leg.position.set(s*profile.legX,profile.legY,.01);B.add(leg);
+    sdLathePart(leg,[[0,0],[.07,.015],[.11,.08],[.122,.21],[.116,.36],[.09,.48],[.055,.58],[0,.61]],skin,0,-.15,-.01,.92,1.05,1.0);
+    const foot=sdFootShape(leg,skin,0,-.34,-.11,s);foot.scale.set(1.10,.82,1.32);
     A.legs.push({g:leg,s,ph:s>0?PI:0});legs.push(leg);
   }
   const head=new THREE.Group();head.name='head';head.position.set(0,1.53+profile.headLift,-.055+profile.headZ);B.add(head);A.head=head;
   const r=profile.headR;
-  const hm=sdBall(head,r,skin,0,0,0,1.035,.98,.995);hm.name='headSkin';
-  A.headR=r;A.headS=[1.035,.98,.995];
-  const tail=new THREE.Group();tail.name='tail';tail.position.set(0,.63,.30);B.add(tail);A.tail=tail;
+  const hm=sdBall(head,r,skin,0,0,0,...profile.headScale);hm.name='headSkin';
+  A.headR=r;A.headS=profile.headScale.slice();
+  const tail=new THREE.Group();tail.name='tail';tail.position.set(0,profile.tailY,profile.tailZ);B.add(tail);A.tail=tail;
   A.parts={body,head,leftArm:arms[0],rightArm:arms[1],leftLeg:legs[0],rightLeg:legs[1],tail};
-  // Legacy clothing fit anchors remain present and aligned with this single SD silhouette.
   A.fit={y0:.43,y1:1.17,r0:.36*profile.bodyWidth,r1:.22,neck:1.23,
     legTop:.40,legLen:.26,legR:.13,sleeve:[.13,1.22,-.13],human:cfg.type==='human'};
   A.h=2.12+profile.headLift;A.waddle=.045;A.headRadius=r;
-  A.sd={skin,skinColor:chosen,base:core,shirt,profile};
+  A.sd={skin,skinColor:chosen,base:core,shirt,shirtMat,profile};
   return A;
 }
 /* CanvasTexture-only eyes/nose/mouth: no 3D face spheres or nostril dots. */
+
+
 function createSDFaceTexture(cfg,expr){
   const key=(cfg.id||cfg.sp||cfg.type)+':'+expr;
   if(SD_FACE_CACHE[key])return SD_FACE_CACHE[key];
@@ -465,43 +551,46 @@ function createSDFaceTexture(cfg,expr){
   const g=c.getContext('2d');g.clearRect(0,0,512,512);g.lineCap='round';g.lineJoin='round';
   const bird=cfg.type==='bird',dog=cfg.sp==='dog',cat=cfg.sp==='cat',dragon=!!cfg.dragonStyle,
     dino=cfg.type==='dino',human=cfg.type==='human';
-  const dark='#30272b',ex=dino?88:(bird?83:(human?91:87)),ey=218;
+  const dark='#30272b',ex=dino?88:(bird?84:(human?92:88)),ey=214;
   const smile=expr==='smile'||expr==='joy',closed=expr==='blink'||expr==='sleepy'||expr==='joy';
   function eye(x){
     g.fillStyle=dark;
-    if(closed){g.strokeStyle=dark;g.lineWidth=11;g.beginPath();g.moveTo(x-21,ey+2);g.quadraticCurveTo(x,ey-20,x+21,ey+2);g.stroke();}
-    else{const w=human?13:15,h=human?18:21,sc=expr==='wow'?1.2:1;
-      g.beginPath();g.ellipse(x,ey,w*sc,h*sc,0,0,PI*2);g.fill();
-      g.fillStyle='#fffaf5';g.beginPath();g.arc(x+4,ey-6,5,0,PI*2);g.fill();
-      g.fillStyle=dark;}
+    if(closed){g.strokeStyle=dark;g.lineWidth=11;g.beginPath();g.moveTo(x-23,ey+4);g.quadraticCurveTo(x,ey-22,x+23,ey+4);g.stroke();}
+    else{
+      const w=(human?17:19)*(expr==='wow'?1.08:1),h=(human?24:28)*(expr==='wow'?1.08:1);
+      g.beginPath();g.ellipse(x,ey,w,h,0,0,PI*2);g.fill();
+      g.fillStyle='#fffaf5';g.beginPath();g.arc(x+5,ey-8,6.5,0,PI*2);g.fill();
+      g.beginPath();g.arc(x-3,ey-1,2.5,0,PI*2);g.fill();
+      g.fillStyle=dark;
+    }
   }
-  // Layered watercolor blush, with no circular protruding cheek meshes.
   for(const s of [-1,1]){
-    const bx=256+s*148,by=278;
-    const grd=g.createRadialGradient(bx,by,5,bx,by,49);
-    grd.addColorStop(0,'rgba(244,155,151,.48)');grd.addColorStop(1,'rgba(244,155,151,0)');
-    g.fillStyle=grd;g.beginPath();g.ellipse(bx,by,53,34,0,0,PI*2);g.fill();
+    const bx=256+s*146,by=282;
+    const grd=g.createRadialGradient(bx,by,4,bx,by,56);
+    grd.addColorStop(0,'rgba(248,168,164,.52)');grd.addColorStop(1,'rgba(248,168,164,0)');
+    g.fillStyle=grd;g.beginPath();g.ellipse(bx,by,58,36,0,0,PI*2);g.fill();
     eye(256+s*ex);
   }
-  const mx=256,my=304;
+  const mx=256,my=308;
   g.strokeStyle=dark;g.fillStyle=dark;g.lineWidth=9;
-  // Species-specific small noses are single illustrated marks, never twin nostrils.
-  if(cat||dog){g.fillStyle=cat?'#d58d91':'#514448';g.beginPath();g.moveTo(mx-10,my-10);g.quadraticCurveTo(mx,my-18,mx+10,my-10);g.quadraticCurveTo(mx,my+1,mx-10,my-10);g.fill();}
-  if(bird){const beak=cfg.duck?'#df8c56':cfg.mandarin?'#d85d4c':cfg.phoenix?'#e8a351':cfg.crane?'#6c6865':'#b7976d';
-    g.fillStyle=beak;g.beginPath();g.moveTo(mx-14,my-10);g.quadraticCurveTo(mx,my-15,mx+14,my-10);g.quadraticCurveTo(mx,my+8,mx-14,my-10);g.fill();}
-  else if(expr==='wow'){g.beginPath();g.ellipse(mx,my+12,10,13,0,0,PI*2);g.fill();}
-  else if(expr==='sleepy'||expr==='focus'){
-    g.beginPath();g.moveTo(mx-14,my+8);g.quadraticCurveTo(mx,my+12,mx+14,my+8);g.stroke();
+  if(dino){
+    // Tiny flat painted dots; no hornlike/piglike 3D nose pieces.
+    g.save();g.globalAlpha=.22;g.fillStyle='#776d60';
+    for(const dx of [-14,14]){g.beginPath();g.ellipse(mx+dx,my-27,2.6,2.2,0,0,PI*2);g.fill();}
+    g.restore();
   }
-  else if(smile){g.beginPath();g.moveTo(mx-25,my);g.quadraticCurveTo(mx,my+32,mx+25,my);g.stroke();
-    if(expr==='joy'){g.fillStyle='#ce8790';g.beginPath();g.ellipse(mx,my+23,11,7,0,0,PI*2);g.fill();}}
-  else{g.beginPath();g.moveTo(mx-23,my+2);g.quadraticCurveTo(mx-11,my+21,mx,my+8);g.quadraticCurveTo(mx+11,my+21,mx+23,my+2);g.stroke();}
+  if(cat||dog){g.fillStyle=cat?'#d58d91':'#514448';g.beginPath();g.moveTo(mx-11,my-12);g.quadraticCurveTo(mx,my-20,mx+11,my-12);g.quadraticCurveTo(mx,my+1,mx-11,my-12);g.fill();}
+  if(bird){const beak=cfg.duck?'#df8c56':cfg.mandarin?'#d85d4c':cfg.phoenix?'#e8a351':cfg.crane?'#6c6865':'#b7976d';
+    g.fillStyle=beak;g.beginPath();g.moveTo(mx-15,my-12);g.quadraticCurveTo(mx,my-17,mx+15,my-12);g.quadraticCurveTo(mx,my+8,mx-15,my-12);g.fill();}
+  else if(expr==='wow'){g.beginPath();g.ellipse(mx,my+12,12,15,0,0,PI*2);g.fill();}
+  else if(expr==='sleepy'||expr==='focus'){
+    g.beginPath();g.moveTo(mx-15,my+8);g.quadraticCurveTo(mx,my+13,mx+15,my+8);g.stroke();
+  }
+  else if(smile){g.beginPath();g.moveTo(mx-27,my);g.quadraticCurveTo(mx,my+34,mx+27,my);g.stroke();
+    if(expr==='joy'){g.fillStyle='#ce8790';g.beginPath();g.ellipse(mx,my+24,12,8,0,0,PI*2);g.fill();}}
+  else{g.beginPath();g.moveTo(mx-24,my+2);g.quadraticCurveTo(mx-12,my+22,mx,my+9);g.quadraticCurveTo(mx+12,my+22,mx+24,my+2);g.stroke();}
   if(dino&&cfg.species==='rex'&&['base','smile','joy'].includes(expr)){
-    // Two tiny illustrated teeth, never separate plastic facial meshes.
-    g.fillStyle='#fff9ef';for(const dx of [-15,15]){
-      g.beginPath();g.moveTo(mx+dx-6,my+9);g.lineTo(mx+dx+6,my+9);
-      g.lineTo(mx+dx,my+18);g.closePath();g.fill();
-    }
+    g.fillStyle='#fff9ef';for(const dx of [-16,16]){g.beginPath();g.moveTo(mx+dx-6,my+10);g.lineTo(mx+dx+6,my+10);g.lineTo(mx+dx,my+19);g.closePath();g.fill();}
   }
   if(cfg.mask==='tiger'){g.strokeStyle='#746865';g.lineWidth=8;for(let i=-1;i<=1;i++){g.beginPath();g.moveTo(256+i*23,135);g.lineTo(256+i*18,157);g.stroke();}}
   if(cfg.stripe){g.strokeStyle='#d69a62';g.lineWidth=8;for(let i=-1;i<=1;i++){g.beginPath();g.moveTo(256+i*27,134);g.lineTo(256+i*21,155);g.stroke();}}
@@ -510,6 +599,7 @@ function createSDFaceTexture(cfg,expr){
   SD_FACE_CACHE[key]=tex;return tex;
 }
 function sdFaceGeometry(rx,ry,rz){
+
   // Curved UV patch follows the front ellipsoid (negative Z), preventing floating faces.
   const vertices=[],uvs=[],indices=[],nx=28,ny=22;
   for(let y=0;y<=ny;y++)for(let x=0;x<=nx;x++){
@@ -554,10 +644,91 @@ function sdPartColors(cfg,look){
     secondary:sdMat(sdSoftColor(secondary==null?0xf7ead0:secondary,.04)),
     ivory:sdMat(0xf6e7c9),dark:sdMat(0x7e706c)};
 }
-function sdTail(A,points,r,mat){const tail=A.tail;sdTube(tail,points,r,mat);A.tails.push(tail);return tail;}
+function sdTail(A,points,r,mat){
+  // Rounded plush tail: broad at the hip, gradually tapered at the end.
+  // Keep A.tail / A.tails as the existing clothing and animation anchors.
+  const group=A.tail;
+  const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));
+  const segments=30, sides=10, verts=[], uv=[], idx=[];
+  for(let i=0;i<=segments;i++){
+    const t=i/segments;
+    const center=curve.getPoint(t), tangent=curve.getTangent(t).normalize();
+    const fallback=Math.abs(tangent.y)>.90?new THREE.Vector3(1,0,0):new THREE.Vector3(0,1,0);
+    const u=new THREE.Vector3().crossVectors(tangent,fallback).normalize();
+    const v=new THREE.Vector3().crossVectors(tangent,u).normalize();
+    const rad=r*(1.28-.94*t)*Math.pow(Math.max(.015,1-t*t),.20);
+    for(let j=0;j<=sides;j++){
+      const a=j/sides*PI*2;
+      const pos=center.clone().addScaledVector(u,Math.cos(a)*rad).addScaledVector(v,Math.sin(a)*rad);
+      verts.push(pos.x,pos.y,pos.z); uv.push(j/sides,t);
+      if(i<segments&&j<sides){const n=i*(sides+1)+j;idx.push(n,n+1,n+sides+1,n+1,n+sides+2,n+sides+1);}
+    }
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  g.setIndex(idx);g.computeVertexNormals();
+  group.add(new THREE.Mesh(g,mat));A.tails.push(group);return group;
+}
 function sdEar(p,x,y,z,r,h,mat,rz=0){
   const ear=new THREE.Mesh(new THREE.ConeGeometry(r,h,12),mat);
   ear.position.set(x,y,z);ear.rotation.z=rz;p.add(ear);return ear;
+}
+function sdSnout(p,main,under,x=0,y=-.06,z=-.30,sx=1.0,sy=.78,sz=.92){
+  const g=new THREE.Group();g.position.set(x,y,z);p.add(g);
+  sdBall(g,.17,main,0,.02,.02,1.2*sx,.88*sy,1.0*sz);
+  sdBall(g,.14,under||main,0,-.08,-.02,1.12*sx,.62*sy,.86*sz);
+  return g;
+}
+function sdMuzzleStitch(p,x,y,z,w=.04,h=.015,col=0x6b5f59){
+  const m=sdBall(p,.028,sdMat(col),x,y,z,w/.028,h/.028,1.0);return m;
+}
+function sdPlushWing(p,mat,s,x,y,z,scale=1){
+  const g=new THREE.Group();g.position.set(x,y,z);g.rotation.z=s*.22;p.add(g);
+  sdBall(g,.17,mat,s*.02,0,0,.85*scale,1.25*scale,.40*scale);
+  sdBall(g,.12,mat,s*.10,-.07,.03,.75*scale,1.0*scale,.32*scale);
+  sdBall(g,.10,mat,s*.14,-.15,.04,.65*scale,.85*scale,.28*scale);
+  return g;
+}
+function sdBeak3D(p,mat,type='small'){
+  const g=new THREE.Group();g.position.set(0,-.03,-.37);p.add(g);
+  if(type==='flat'){
+    sdBall(g,.09,mat,0,0,0,1.55,.55,.88);sdBall(g,.07,mat,0,-.04,-.04,1.28,.34,.70);
+  }else if(type==='long'){
+    sdBall(g,.08,mat,0,0,0,1.55,.55,.74);
+  }else if(type==='hook'){
+    const b=sdBall(g,.085,mat,0,0,0,1.22,.62,.86);b.rotation.x=-.16;sdBall(g,.05,mat,0,-.04,-.08,1.0,.42,.72);
+  }else{
+    sdBall(g,.075,mat,0,0,0,1.12,.70,.78);
+  }
+  return g;
+}
+function sdDragonBelly(A,mat){
+  for(let i=0;i<4;i++)sdBall(A.bob,.08,mat,0,.74+i*.12,-.26+i*.01,1.65,.28,.35);
+}
+function sdTailTip(tail,mat,kind='tuft'){
+  if(kind==='arrow'){
+    sdBall(tail,.08,mat,.46,.22,.48,1.0,.45,1.0);
+    sdCone(tail,.07,.18,mat,.50,.22,.56,0,.72);
+  }else{
+    sdBall(tail,.08,mat,.34,.30,.46,.9,1.2,.85);
+    sdBall(tail,.06,mat,.41,.36,.48,.7,1.0,.75);
+  }
+}
+function sdDorsalBumps(A,mat,count=4,baseY=1.13,baseZ=.16){for(let i=0;i<count;i++)sdBall(A.bob,.06+Math.sin((i+1)/(count+1)*PI)*.02,mat,0,baseY-i*.09,baseZ+i*.10,1.0,.74,.8);}
+function sdTuneAnchors(A,cfg){
+  if(cfg.type==='bird'){A.fit.y1=cfg.crane?1.02:.98;A.fit.neck=cfg.crane?1.32:1.15;A.fit.sleeve=[.08,1.02,-.08];}
+  else if(cfg.type==='dino'){A.fit.y1=1.00;A.fit.neck=1.15;A.fit.sleeve=[.12,1.00,-.10];}
+  else if(cfg.sp==='dragon'){A.fit.y1=1.02;A.fit.neck=1.18;A.fit.sleeve=[.10,1.04,-.10];}
+  else if(cfg.type==='turtle'){A.fit.y1=.92;A.fit.neck=1.05;A.fit.sleeve=[.16,.92,-.06];}
+  else if(cfg.sp==='cat'){A.fit.y1=1.06;A.fit.neck=1.20;}
+  else if(cfg.sp==='dog'){A.fit.y1=1.08;A.fit.neck=1.22;}
+  if(A.gat){
+    if(cfg.type==='human'){A.gat.position.y=.8;A.gat.scale.set(1,1,1);} 
+    else if(cfg.sp==='cat'||cfg.sp==='dog'){A.gat.position.y=.76;A.gat.scale.set(.95,.95,.95);} 
+    else A.gat.visible=false;
+  }
+  if(A.book){A.book.position.y=A.bookY=cfg.crane?.82:(cfg.type==='bird'||cfg.type==='dino'||cfg.sp==='dragon')?.86:.91;}
 }
 function sdBuildHuman(A,cfg,col){
   const hair=sdMat(cfg.fem?0x49352e:0x70503a);
@@ -570,115 +741,143 @@ function sdBuildHuman(A,cfg,col){
   A.h=2.17;
 }
 function sdBuildCat(A,cfg,col){
+  A.head.scale.set(1.08,.98,1.0);A.headS=[1.13,.98,1.0];
   for(const s of [-1,1]){
-    sdEar(A.head,s*.3,.39,.025,.165,.31,col.main,-s*.22);
-    sdEar(A.head,s*.3,.41,-.095,.105,.20,sdMat(0xe6aca9),-s*.22);
+    sdEar(A.head,s*.31,.39,.02,.17,.30,col.main,-s*.18);
+    sdEar(A.head,s*.31,.40,-.10,.10,.18,sdMat(0xf0c2bf),-s*.18);
+    sdBall(A.head,.12,col.main,s*.31,-.06,.12,.9,1.15,.82); // cheek fluff silhouette
   }
-  sdTail(A,[[0,0,0],[.21,.08,.13],[.31,.24,.14],[.24,.40,.1]],.095,col.main);
+  sdSnout(A.head,col.main,col.secondary,0,-.09,-.28,1.02,.78,.92);
+  sdBall(A.bob,.12,col.secondary,0,.97,-.19,1.0,.7,.9);
+  const tail=sdTail(A,[[0,0,0],[.18,.07,.16],[.31,.24,.14],[.29,.41,.10]],.10,col.main);sdTailTip(tail,col.main,'tuft');
   if(cfg.mask==='tuxedo')sdBall(A.head,.20,col.secondary,0,-.29,-.17,1.2,.47,.92);
 }
 function sdBuildDog(A,cfg,col){
+  A.parts.body.scale.set(1.02,1.0,1.0);A.headS=[1.08,.98,1.10];
   const upright=cfg.ear==='dog'||cfg.ear==='big';
   for(const s of [-1,1]){
-    if(upright)sdEar(A.head,s*.31,.39,.05,cfg.ear==='big'?.155:.13,cfg.ear==='big'?.38:.30,col.main,-s*.25);
-    else {const flap=sdBall(A.head,.165,col.main,s*.40,.05,.01,.64,1.40,.82);flap.rotation.z=s*.38;}
+    if(upright)sdEar(A.head,s*.31,.38,.02,cfg.ear==='big'?.16:.13,cfg.ear==='big'?.36:.28,col.main,-s*.18);
+    else {const flap=sdBall(A.head,.17,col.main,s*.38,.06,.03,.62,1.48,.86);flap.rotation.z=s*.36;}
+    sdBall(A.head,.11,col.main,s*.30,-.02,.10,.9,1.0,.84);
   }
+  sdSnout(A.head,col.main,col.secondary,0,-.05,-.31,1.08,.82,.98);
   if(cfg.fluffy||cfg.shaggy){for(let i=0;i<5;i++)sdBall(A.head,.115,col.main,(i-2)*.14,.36+(i%2)*.025,-.11,1,.65,.8);}
-  if(cfg.tail==='curl')sdTail(A,[[0,0,0],[.18,.1,.13],[.23,.28,.12],[.12,.36,.03]],.10,col.main);
-  else sdTail(A,[[0,0,0],[.08,.08,.14],[.1,.23,.21]],.11,col.main);
+  const kind=cfg.tail==='curl'?'arrow':'tuft';
+  if(cfg.tail==='curl'){const tail=sdTail(A,[[0,0,0],[.17,.10,.13],[.24,.29,.11],[.13,.38,.02]],.10,col.main);sdTailTip(tail,col.main,kind);}
+  else if(cfg.tail==='puff'){const tail=sdTail(A,[[0,0,0],[.10,.08,.14],[.13,.23,.22]],.11,col.main);sdBall(tail,.12,col.main,.12,.24,.23,.92,1.08,.92);}
+  else sdTail(A,[[0,0,0],[.12,.05,.16],[.20,.10,.24]],.10,col.main);
 }
 function sdBuildFrog(A,cfg,col){
-  for(const s of [-1,1])sdBall(A.head,.155,col.main,s*.29,.36,.02,.95,1.12,.94); // eye cushions, no 3D pupils
+  A.parts.body.scale.set(1.03,.90,.98);A.head.scale.set(1.10,.92,.98);A.headS=[1.18,.94,.98];
+  for(const s of [-1,1]){
+    sdBall(A.head,.16,col.main,s*.28,.34,.02,.95,1.18,.96);
+    sdBall(A.head,.08,col.secondary,s*.19,-.01,-.28,.62,.42,.6);
+  }
+  A.arms.forEach((a,i)=>{a.g.position.x+=(i? .02:-.02);a.g.position.y=.88;});
   A.hop=true;A.waddle=.075;
 }
 function sdBuildTurtle(A,cfg,col){
+  A.parts.body.scale.set(1.12,.86,1.02);A.head.position.set(0,1.40,-.06);A.headS=[1.02,.92,.96];
   const shell=sdMat(cfg.dark?0x5a7771:0x83ac82);
-  const dome=new THREE.Mesh(new THREE.SphereGeometry(.44,32,20,0,PI*2,0,PI*.55),shell);
-  dome.rotation.x=-PI/2;dome.position.set(0,.75,.37);dome.scale.set(1.01,.7,1);A.bob.add(dome);
-  if(cfg.dark){sdBall(A.head,.12,col.ivory,0,.43,.17);}
-  sdTail(A,[[0,0,0],[.05,.04,.10],[.1,.06,.24]],.08,col.main);
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(.48,32,20,0,PI*2,0,PI*.55),shell);
+  dome.rotation.x=-PI/2;dome.position.set(0,.73,.40);dome.scale.set(1.08,.78,1.04);A.bob.add(dome);
+  sdBall(A.bob,.23,col.secondary,0,.69,.38,1.05,.44,.88);
+  if(cfg.dark){sdBall(A.head,.12,col.ivory,0,.36,.16);}
+  sdSnout(A.head,col.main,col.secondary,0,-.03,-.24,.80,.58,.76);
+  sdTail(A,[[0,0,0],[.04,.04,.10],[.08,.05,.24]],.07,col.main);
 }
 function sdBuildDinosaur(A,cfg,col){
   const species=cfg.species||'brachio';
+  A.parts.body.scale.x*=1.04;
+  sdBall(A.bob,.18,col.main,0,.70,.22,1.45,.92,1.08); // hips / weighted rear
+  sdSnout(A.head,col.main,col.secondary,0,-.16,-.30,species==='brachio'?.84:1.02,.72,.93);
+  // Deliberately no 3D nose or nostril geometry: facial marks are CanvasTexture only.
+  sdDorsalBumps(A,col.secondary,species==='stego'?2:4,1.15,.13);
   if(species==='brachio'){
-    // A continuous, attached neck runs from the pear torso to the raised head.
-    sdBall(A.bob,.20,col.main,0,1.29,-.14,.95,1.8,.89);
-    sdTube(A.bob,[[0,1.06,-.09],[0,1.33,-.13],[0,1.62,-.2],[0,1.78,-.21]],.155,col.main);
-    sdBall(A.bob,.14,col.secondary,0,1.44,-.278,.62,2.1,.48);
+    A.parts.body.scale.set(1.15,.95,1.08);A.head.position.set(0,1.83,-.27);A.head.scale.set(.92,.96,.96);A.headS=[.94,.95,.96];
+    sdBall(A.bob,.22,col.main,0,1.18,-.12,.95,1.8,.90);
+    sdTube(A.bob,[[0,1.02,-.09],[0,1.30,-.13],[0,1.58,-.20],[0,1.78,-.23]],.165,col.main);
+    sdBall(A.bob,.14,col.secondary,0,1.48,-.28,.62,2.0,.48);
+    const tail=sdTail(A,[[0,0,0],[.18,.06,.18],[.32,.14,.44],[.38,.22,.72]],.14,col.main);
   }else if(species==='rex'){
-    A.head.scale.set(1.11,1.00,1.15);A.headS=[1.13,.98,1.14];
-    // The enlarged cranium itself forms a continuous rounded snout silhouette.
-    A.sd.shirt.scale.x*=1.05;
-    for(const s of [-1,1]){
-      const small=A.parts[s<0?'leftArm':'rightArm'];small.scale.set(.72,.73,.76);
-      small.position.set(s*.29,.94,-.17);
-    }
-    for(let k=0;k<3;k++)sdCone(A.bob,.08,.15,col.secondary,0,1.19-k*.15,.28+k*.10,-.40,.55);
+    A.head.scale.set(1.15,1.00,1.18);A.headS=[1.15,1.0,1.18];
+    for(const s of [-1,1]){const small=A.parts[s<0?'leftArm':'rightArm'];small.scale.set(.62,.66,.68);small.position.set(s*.26,.91,-.17);small.rotation.z=-s*.10;}
+    const tail=sdTail(A,[[0,0,0],[.18,.05,.22],[.34,.12,.48],[.46,.18,.72]],.14,col.main);
+    for(let k=0;k<4;k++)sdBall(A.bob,.06-k*.007,col.secondary,0,1.16-k*.09,.24+k*.11,1,.76,.82);
   }else if(species==='trike'){
-    sdBall(A.head,.43,col.secondary,0,.13,.23,1.35,1.03,.44); // frill BEHIND face
-    for(const s of [-1,1])sdCone(A.head,.085,.22,col.ivory,s*.25,.30,-.16,-s*.16);
-    sdCone(A.head,.052,.15,col.ivory,0,-.03,-.43,0,-1.0);
+    A.parts.body.scale.set(1.16,.94,1.06);A.head.scale.set(1.08,.98,1.14);A.headS=[1.12,1.0,1.14];
+    sdBall(A.head,.44,col.secondary,0,.12,.24,1.35,1.03,.46);
+    for(const s of [-1,1])sdCone(A.head,.09,.24,col.ivory,s*.26,.28,-.16,-s*.16);
+    sdCone(A.head,.055,.16,col.ivory,0,-.01,-.45,0,-1.0);
+    const tail=sdTail(A,[[0,0,0],[.14,.05,.16],[.25,.10,.34],[.24,.13,.52]],.11,col.main);
   }else if(species==='stego'){
-    for(let i=0;i<5;i++){
-      const scale=Math.sin((i+1)/6*PI);
-      sdCone(A.bob,.09+scale*.04,.14+scale*.13,col.secondary,(i%2?.08:-.08),1.18,-.18+i*.19,0,.15);
-    }
+    A.parts.body.scale.set(1.16,.95,1.08);A.head.scale.set(.98,.95,1.08);A.headS=[1.0,.98,1.08];
+    for(let i=0;i<6;i++){const sc=Math.sin((i+1)/7*PI);sdCone(A.bob,.09+sc*.04,.14+sc*.14,col.secondary,(i%2?.08:-.08),1.18,-.16+i*.17,0,.15);}
+    const tail=sdTail(A,[[0,0,0],[.18,.06,.18],[.32,.15,.42],[.42,.22,.64]],.12,col.main);for(let i=0;i<4;i++)sdCone(tail,.04,.18,col.secondary,.18+i*.07,.20,.48+i*.09,0,.52);
   }else if(species==='anky'){
-    for(let j=0;j<3;j++)for(let k=-1;k<=1;k++)sdBall(A.bob,.095,col.secondary,k*.23,1.12-j*.09,.02+j*.21,1,.55,.85);
+    A.parts.body.scale.set(1.18,.90,1.10);A.head.scale.set(1.00,.94,1.08);A.headS=[1.02,.95,1.06];
+    for(let j=0;j<3;j++)for(let k=-1;k<=1;k++)sdBall(A.bob,.10,col.secondary,k*.23,1.10-j*.09,.02+j*.20,1,.55,.85);
+    const tail=sdTail(A,[[0,0,0],[.18,.02,.20],[.34,.08,.40],[.47,.13,.62]],.13,col.main);sdBall(tail,.20,col.secondary,.47,.13,.62,1.12,.88,.94);
   }
-  const tail=sdTail(A,[[0,0,0],[.12,.06,.2],[.25,.13,.45],[.29,.20,.66]],species==='anky'?.14:.11,col.main);
-  if(species==='anky')sdBall(tail,.18,col.secondary,.29,.20,.66,1.10,.87,.9);
-  if(species==='stego')for(let i=0;i<3;i++)sdCone(tail,.04,.17,col.secondary,.17+i*.06,.20,.5+i*.09,0,.5);
-  // Creature parts all attach to the same rig and preserve the selected body colors.
 }
 function sdBuildBird(A,cfg,col){
-  // Birds differ in head/body proportions while sharing the same shoulder joints.
+  const wingMat=cfg.peacock?sdMat(0x2f9b87):cfg.phoenix?sdMat(0xe57254):col.main;
+  A.arms.forEach((a,idx)=>{
+    a.wing=true;a.restZ=.05;
+    // Existing groups remain for emotes/accessories, but the bipedal arm mesh is hidden.
+    a.g.children.forEach(piece=>piece.visible=false);
+    a.g.position.set(a.s*(cfg.crane?.29:.31),cfg.crane?.98:.91,.03);
+    a.g.scale.set(.90,.92,.70);a.g.rotation.z=-a.s*.04;a.g.rotation.x=.15;
+    sdPlushWing(a.g,wingMat,a.s,0,-.08,.035,cfg.crane?.80:(cfg.duck?1.12:.98));
+  });
   if(cfg.crane){
-    sdBall(A.bob,.165,col.main,0,1.24,-.03,.78,1.35,.84);
-    sdBall(A.head,.095,sdMat(0xcc4344),0,.42,-.05,1,.48,1);
-    for(const s of [-1,1]){A.parts[s<0?'leftLeg':'rightLeg'].scale.y=1.1;}
-  } else if(cfg.duck){A.head.scale.set(1.06,.95,.98);A.parts.body.scale.x*=1.12;}
-  else if(cfg.mandarin){
-    for(const s of [-1,1]){sdBall(A.bob,.15,sdMat(0xe39755),s*.34,.83,.10,.9,.8,.63);}
-  }else if(cfg.peacock){
-    const fan=new THREE.Group();fan.position.set(0,.86,.32);fan.name='peacockTail';A.bob.add(fan);
-    for(let i=-4;i<=4;i++){
-      const f=sdBall(fan,.12,sdMat(i%2?0x4bb196:0x79bc8f),i*.11,.47-Math.abs(i)*.037,.12,
-        .89,2.9,.45);f.rotation.z=-i*.14;
-      sdBall(fan,.061,sdMat(0x4d83a8),i*.118,.80-Math.abs(i)*.047,.035,1,.72,.47);
-    }
-    for(let i=-1;i<=1;i++)sdBall(A.head,.04,sdMat(0x3d7eac),i*.07,.48,.02,1,1.7,.95);
-  }else if(cfg.phoenix){
+    A.parts.body.scale.set(.86,.98,.92);A.head.position.set(0,1.75,-.08);A.headS=[.98,1.02,.94];
+    sdTube(A.bob,[[0,1.00,-.06],[0,1.25,-.08],[0,1.50,-.10],[0,1.67,-.10]],.095,col.main);sdBeak3D(A.head,sdMat(cfg.beak||0x4d4742),'long');sdBall(A.head,.095,sdMat(cfg.crest||0xcc4344),0,.38,-.05,1,.50,1);
+    for(const s of [-1,1]){A.parts[s<0?'leftLeg':'rightLeg'].scale.y=1.18;A.parts[s<0?'leftLeg':'rightLeg'].position.y=.36;}
+    sdTail(A,[[0,0,0],[0,.08,.18],[0,.18,.36]],.055,col.main);
+  } else if(cfg.duck){
+    A.parts.body.scale.set(1.10,.90,1.06);A.head.scale.set(1.08,.96,1.02);A.headS=[1.12,.95,1.02];sdBeak3D(A.head,sdMat(cfg.beak||0xef8a2c),'flat');
+    for(const s of [-1,1])sdBall(A.parts[s<0?'leftLeg':'rightLeg'],.06,sdMat(cfg.lc||0xf28a2a),0,-.38,-.08,1.55,.28,1.10);
+    sdTail(A,[[0,0,0],[0,.09,.16],[0,.14,.25]],.08,col.main);
+  } else if(cfg.mandarin){
+    A.parts.body.scale.set(1.08,.93,1.08);sdBeak3D(A.head,sdMat(cfg.beak||0xde4f33),'small');
+    for(const s of [-1,1]){sdBall(A.bob,.15,sdMat(0xe39755),s*.34,.83,.10,.9,.8,.63);}sdTail(A,[[0,0,0],[0,.08,.16],[0,.17,.30]],.08,col.main);
+  } else if(cfg.peacock){
+    sdBeak3D(A.head,sdMat(cfg.beak||0x80816a),'small');
+    const fan=new THREE.Group();fan.position.set(0,.86,.34);fan.name='peacockTail';A.bob.add(fan);
+    for(let i=-4;i<=4;i++){const f=sdBall(fan,.12,sdMat(i%2?0x4bb196:0x79bc8f),i*.11,.47-Math.abs(i)*.037,.12,.89,2.9,.45);f.rotation.z=-i*.14;sdBall(fan,.061,sdMat(0x4d83a8),i*.118,.80-Math.abs(i)*.047,.035,1,.72,.47);}for(let i=-1;i<=1;i++)sdBall(A.head,.04,sdMat(0x3d7eac),i*.07,.48,.02,1,1.7,.95);
+  } else if(cfg.phoenix){
+    sdBeak3D(A.head,sdMat(cfg.beak||0xf39a2f),'hook');
     for(let i=-2;i<=2;i++)sdCone(A.head,.065,.24,sdMat(i%2?0xf3af61:0xdc705d),i*.12,.41,.07,i*.15);
-    const tail=new THREE.Group();tail.name='phoenixPlumes';tail.position.set(0,.70,.34);A.bob.add(tail);A.tails.push(tail);
-    for(let i=-2;i<=2;i++)sdTube(tail,[[i*.08,0,0],[i*.12,.20,.22],[i*.16,.32,.46]],.043,sdMat(i%2?0xedb16e:0xcf6c61));
+    const tail=new THREE.Group();tail.name='phoenixPlumes';tail.position.set(0,.74,.34);A.bob.add(tail);A.tails.push(tail);for(let i=-2;i<=2;i++)sdTube(tail,[[i*.08,0,0],[i*.12,.20,.22],[i*.16,.32,.46]],.043,sdMat(i%2?0xedb16e:0xcf6c61));
+  } else {
+    A.parts.body.scale.set(.92,.84,.92);A.headS=[1.02,.98,.96];sdBeak3D(A.head,sdMat(0xc8b18a),'small');sdTail(A,[[0,0,0],[0,.07,.14],[0,.12,.22]],.06,col.main);
   }
-  if(!cfg.peacock&&!cfg.phoenix)sdTail(A,[[0,0,0],[0,.09,.18],[0,.18,.28]],.087,col.main);
-  A.arms.forEach(a=>{a.wing=true;});
 }
 function sdBuildDragon(A,cfg,col){
   const east=cfg.dragonStyle==='east'||(!cfg.dragonStyle&&cfg.sp==='dragon');
+  A.parts.body.scale.set(east?1.00:.98,east?.94:1.00,1.02);
+  A.head.scale.set(east?1.02:1.12,.98,east?1.08:1.12);A.headS=east?[1.03,.98,1.10]:[1.12,1.0,1.12];
+  sdSnout(A.head,col.main,col.secondary,0,-.16,-.26,east?.77:.84,.64,.74); // tiny low muzzle; eyes remain unobstructed
   for(const s of [-1,1]){
-    sdCone(A.head,.085,.24,col.ivory,s*.23,.38,.025,-s*.24);
-    if(east){sdTube(A.head,[[s*.17,.30,.03],[s*.24,.39,.08],[s*.31,.43,.06]],.025,col.ivory);}
+    if(east){sdTube(A.head,[[s*.18,.20,.02],[s*.29,.25,-.04],[s*.40,.22,-.12]],.022,col.ivory);} // whiskers
+    sdCone(A.head,.08,.23,col.ivory,s*.22,.36,.02,-s*.18);
+    if(east)sdTube(A.head,[[s*.16,.28,.04],[s*.24,.40,.07],[s*.31,.45,.05]],.025,col.ivory);
   }
+  sdDragonBelly(A,col.secondary);
   if(east){
-    sdBall(A.bob,.15,col.main,0,1.24,.0,.8,1.20,.78);
-    const tail=sdTail(A,[[0,0,0],[.20,.07,.16],[.39,.22,.30],[.22,.34,.46]],.095,col.main);
-    sdBall(tail,.075,col.secondary,.22,.34,.46);
+    sdTube(A.bob,[[0,1.01,-.06],[0,1.20,-.08],[0,1.38,-.11],[0,1.54,-.12]],.11,col.main);
+    for(let i=0;i<5;i++)sdBall(A.bob,.05+i*.004,col.secondary,0,1.24-i*.07,.13+i*.07,1,.8,.8); // soft neck mane
+    const tail=sdTail(A,[[0,0,0],[.20,.07,.16],[.39,.22,.30],[.30,.34,.50]],.10,col.main);sdTailTip(tail,col.secondary,'tuft');
   }else{
-    const wings=new THREE.Group();wings.name='staticWings';wings.position.set(0,0,.27);A.bob.add(wings);
+    const wings=new THREE.Group();wings.name='staticWings';wings.position.set(0,0,.28);A.bob.add(wings);
     for(const s of [-1,1]){
-      const shape=new THREE.Shape();shape.moveTo(s*.23,.89);
-      shape.bezierCurveTo(s*.38,1.15,s*.56,1.49,s*.79,1.55);
-      shape.bezierCurveTo(s*.91,1.36,s*.99,1.30,s*1.09,1.20);
-      shape.bezierCurveTo(s*.86,1.15,s*.77,1.08,s*.69,.96);
-      shape.bezierCurveTo(s*.52,1.03,s*.40,.95,s*.23,.89);
-      const mesh=new THREE.Mesh(new THREE.ShapeGeometry(shape,16),sdMat(sdSoftColor((cfg.b||0xffe3cb),.05),{side:THREE.DoubleSide}));
-      mesh.position.z=.08;wings.add(mesh);
+      sdBall(wings,.18,col.secondary,s*.22,1.00,.18,.85,1.18,.42);
+      sdBall(wings,.15,col.secondary,s*.42,1.13,.25,.72,1.10,.30);
+      sdBall(wings,.12,col.secondary,s*.57,1.21,.28,.58,.88,.24);
     }
-    A.staticWings=wings; // deliberately not in A.arms, so emotes cannot flap them.
-    sdTail(A,[[0,0,0],[.18,.02,.17],[.32,.10,.32],[.42,.20,.46]],.12,col.main);
+    A.staticWings=wings;
+    const tail=sdTail(A,[[0,0,0],[.18,.02,.17],[.32,.10,.34],[.46,.19,.56]],.12,col.main);sdTailTip(tail,col.secondary,'arrow');
   }
 }
 function sdBuildSpecies(A,cfg,look){
@@ -693,6 +892,8 @@ function sdBuildSpecies(A,cfg,look){
   else if(cfg.sp==='dragon')sdBuildDragon(A,cfg,col);
 }
 
+/* Compatibility: same 28 AVATARS IDs, makeAvatar/animateAvatar/faceTick,
+   A.head/A.parts/A.arms/A.legs/A.tail/A.fit and A.setFace. */
 /* Keep the original exported/global makeAvatar signature and game-facing fields. */
 function makeAvatar(id,look){
   if(id==='shiba')id='sapsal';
@@ -712,6 +913,7 @@ function makeAvatar(id,look){
   A.gat=makeGat(A.head,A.headR*.99,.8,-.10);
   if(cfg.noGat||cfg.type==='dino'||cfg.type==='bird')A.gat.visible=false;
   avatarBook(A,cfg.species==='brachio'?1.08:.91,-.45);
+  sdTuneAnchors(A,cfg);
   if(typeof applyLook==='function'&&look)applyLook(A,look);
   return A;
 }
@@ -724,7 +926,7 @@ function animateAvatar(A,ph,amt,t,sit){
     A.legs.forEach(l=>{l.g.rotation.x=PI/2.3;});
     const reading=!!(A.reading&&A.book&&A.book.visible);
     A.arms.forEach(a=>{
-      a.g.rotation.x=reading?1.25:.72;a.g.rotation.z=a.s*(reading?.08:.15);
+      a.g.rotation.x=reading?1.25:.72;a.g.rotation.z=a.s*(reading?.08:(a.restZ||.31));
     });
     if(A.head){A.head.rotation.x=reading?.30:.10;A.head.rotation.y=reading?Math.sin(t*.33)*.10:0;}
     if(A.book){if(reading){A.book.position.y=A.bookY+.12;A.book.position.z=A.bookZ-.02;A.book.rotation.x=-1+Math.sin(t*.6)*.02;
@@ -737,7 +939,7 @@ function animateAvatar(A,ph,amt,t,sit){
   A.legs.forEach(l=>{l.g.rotation.x=Math.sin(ph+l.ph)*.52*amt;});
   A.arms.forEach(a=>{
     a.g.rotation.x=Math.sin(ph+a.ph)*.35*amt;
-    a.g.rotation.z=a.s*(a.wing?.23:.17)+a.s*Math.sin(t*2)*.025;
+    a.g.rotation.z=a.s*(a.wing?.055:(a.restZ||.31))+a.s*Math.sin(t*2)*(a.wing?.005:.025);
   });
   A.tails.forEach((g,i)=>{g.rotation.z=Math.sin(t*1.9+i)*.11;});
   if(A.head){A.head.rotation.x=Math.sin(t*1.2)*.025;A.head.rotation.z=Math.sin(t*.8)*.025;A.head.rotation.y=0;}
