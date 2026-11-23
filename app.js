@@ -296,12 +296,17 @@ function closeSheets(){$$('.modal').forEach(m=>m.classList.remove('show'));}
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-close]'))closeSheets();else if(e.target.closest('[data-back]'))openSheet('menu');}));
 $('#menuBtn').addEventListener('click',()=>openSheet('menu'));
 $$('#menuGrid [data-open]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.open==='records')recTab='me';openSheet(b.dataset.open);}));
-function updateMe(){const a=AVMAP[ST.avatar||'girl']||AVATARS[0];const portrait=typeof HKDProfilePortrait==='function'?HKDProfilePortrait(a.id,ST.look):'';$('#meEmo').innerHTML=portrait?`<img src="${portrait}" alt="${a.name} 캐릭터 얼굴">`:'';$('#meNick').textContent=ST.nick||'이름 없는 학생';$('#meAv').textContent=a.name+' · 나의 학당 친구';}
-function renderAvatars(){const html=AVATARS.map(a=>{const im=thumbOf('av',a.id);return `<button data-av="${a.id}" class="${a.id===(ST.avatar||'girl')?'on':''}${a.god?' god':''}">${im?`<img src="${im}" alt="">`:`<img src="${HKDFallbackPortrait(a.id)}" alt="">`}${a.name}</button>`;}).join('');const pg=$('#petGrid');if(pg)pg.innerHTML=PETS.map(p=>{const im=p.id==='none'?'':thumbOf('pet',p.id);return `<button data-pet="${p.id}" class="${p.id===(ST.pet||'none')?'on':''}">${im?`<img src="${im}" alt="">`:'<span>🚶</span>'}${p.name}${p.desc?`<small>${p.desc}</small>`:''}</button>`;}).join('');$('#avGrid').innerHTML=html;const ia=$('#introAv');if(ia)ia.innerHTML=html;}
+function updateMe(){const a=AVMAP[ST.avatar||'girl'];$('#meEmo').textContent=a.emo;$('#meNick').textContent=ST.nick||'이름 없는 학생';$('#meAv').textContent=a.name+' · 갓 착용';}
+function avColorRow(key,label){const cur=(ST.look.c&&ST.look.c[key])||0;return `<div class="cRow"><span>${label}</span><div class="cSw">${PALETTE.map((p,i)=>`<button data-avc="${key}" data-ci="${i}" class="${i===cur?'on':''}${i?'':' def'}" title="${p[0]}" style="${i?`background:#${p[1].toString(16).padStart(6,'0')}`:''}"></button>`).join('')}</div></div>`;}
+function dragonColorPanel(){const a=AVMAP[ST.avatar||'girl'];if(!a||!a.dragonColor)return '';const rows=a.dragonStyle==='west'?[['av','몸 색'],['av2','배 · 날개 색']]:[['av','몸 색'],['av2','배 · 뿔 색']];return `<div class="sec">용 색 고르기 <small>용 캐릭터에서만 보여요</small></div>${rows.map(r=>avColorRow(r[0],r[1])).join('')}`;}
+function ensureAfter(anchorId,boxId){const a=document.getElementById(anchorId);if(!a)return null;let b=document.getElementById(boxId);if(!b){b=document.createElement('div');b.id=boxId;a.insertAdjacentElement('afterend',b);}return b;}
+function renderAvatarColorBoxes(){const h=dragonColorPanel();const b1=ensureAfter('avGrid','avColorBox');if(b1)b1.innerHTML=h;const b2=ensureAfter('introAv','introAvColorBox');if(b2)b2.innerHTML=h;}
+function renderAvatars(){const html=AVATARS.map(a=>{const im=thumbOf('av',a.id);return `<button data-av="${a.id}" class="${a.id===(ST.avatar||'girl')?'on':''}${a.god?' god':''}">${im?`<img src="${im}" alt="">`:`<span>${a.emo}</span>`}${a.name}</button>`;}).join('');const pg=$('#petGrid');if(pg)pg.innerHTML=PETS.map(p=>{const im=p.id==='none'?'':thumbOf('pet',p.id);return `<button data-pet="${p.id}" class="${p.id===(ST.pet||'none')?'on':''}">${im?`<img src="${im}" alt="">`:'<span>🚶</span>'}${p.name}${p.desc?`<small>${p.desc}</small>`:''}</button>`;}).join('');$('#avGrid').innerHTML=html;const ia=$('#introAv');if(ia)ia.innerHTML=html;renderAvatarColorBoxes();}
 $('#nickSave').addEventListener('click',()=>{const v=$('#nickEdit').value.trim().slice(0,12);if(!v){$('#nickEdit').focus();return;}if(window.BadWords&&BadWords.check(v)){toast('고운 말로 된 닉네임을 써 주세요 🙂');return;}ST.nick=v;LS.set('nick',v);saveMember();pushPresence(true);updateMe();toast('닉네임을 「'+esc(v)+'」(으)로 바꿨어요');});
 $('#avGrid').addEventListener('click',e=>{const b=e.target.closest('[data-av]');if(!b)return;setAvatar(b.dataset.av);renderAvatars();toast(AVMAP[b.dataset.av].name+'(으)로 변신했어요');});
 $('#petGrid').addEventListener('click',e=>{const b=e.target.closest('[data-pet]');if(!b)return;setPet(b.dataset.pet);renderAvatars();toast(b.dataset.pet==='none'?'혼자 다니기로 했어요':PETMAP[b.dataset.pet].name+'이(가) 졸졸 따라와요');});
 $('#introAv').addEventListener('click',e=>{const b=e.target.closest('[data-av]');if(!b)return;ST.avatar=b.dataset.av;setAvatar(b.dataset.av);renderAvatars();});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-avc]');if(!b)return;const L=Object.assign({},ST.look,{a:ST.look.a.slice(),c:Object.assign({},ST.look.c||{})});const i=+b.dataset.ci;if(i>0)L.c[b.dataset.avc]=i;else delete L.c[b.dataset.avc];setLook(L);renderAvatars();});
 $('#mapList').addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(!b)return;closeSheets();const id=b.dataset.go;if(id===ST.space)return;enterSpace(id);});
 const mSel=$('#seasonSel');mSel.innerHTML='<option value="auto">자동 (오늘 날짜)</option>'+Object.entries(MONTHS).map(([m,v])=>`<option value="${m}">${m}월 · ${v[1]}</option>`).join('');mSel.value=ST.seasonPick;
 mSel.addEventListener('change',()=>{ST.seasonPick=mSel.value;LS.set('seasonPick',ST.seasonPick);rebuildSeason();});
@@ -364,8 +369,9 @@ function swRow(key,label){const L=ST.look;const cur=(L.c&&L.c[key])||0;return `<
 function renderColors(){const el=$('#wCol');if(!el)return;const L=ST.look;let h='';
   if(wTab==='top')h=swRow('t','상의 색');else if(wTab==='bottom')h=swRow('b','하의 색');else if(wTab==='hat')h=L.h==='none'?'':swRow('h','모자 색');
   else if(wTab==='acc')h=L.a.length?L.a.map(a=>swRow(a,(ACCS.find(x=>x[0]===a)||['',''])[1])).join(''):'<div class="empty">소품을 고르면 여기서 색을 바꿀 수 있어요</div>';
+  const av=AVMAP[ST.avatar||'girl']; if(av&&av.dragonColor){const extra=(av.dragonStyle==='west'?[['av','몸 색'],['av2','배 · 날개 색']]:[['av','몸 색'],['av2','배 · 뿔 색']]).map(r=>swRow(r[0],r[1])).join(''); h=(h?h:'<div class="empty">옷이나 소품을 고르지 않아도 용 색은 바꿀 수 있어요</div>') + extra;}
   el.innerHTML=h?`<div class="sec">색 고르기 <small>맨 앞 동그라미는 기본 색</small></div>${h}`:'';}
-function setLook(L){ST.look=L;LS.set('look',lookStr(L));setAvatar(ST.avatar||'girl');renderWardrobe();}
+function setLook(L){ST.look=L;LS.set('look',lookStr(L));setAvatar(ST.avatar||'girl');renderWardrobe();renderAvatarColorBoxes();}
 $('#wTabs').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;wTab=b.dataset.t;renderWardrobe();});
 $('#wGrid').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.classList.contains('lock')){toast(`🔒 출석 ${b.dataset.need}일이 되면 받을 수 있어요<small>지금 출석 ${attendDays()}일 · 출석도장을 찍어 모아요</small>`);return;}const L=Object.assign({},ST.look,{a:ST.look.a.slice()});
   if(b.dataset.t)L.t=b.dataset.t;else if(b.dataset.b)L.b=b.dataset.b;else if(b.dataset.h)L.h=b.dataset.h;else if(b.dataset.a){const i=L.a.indexOf(b.dataset.a);if(i>=0)L.a.splice(i,1);else{if(L.a.length>=4){toast('소품은 4개까지 착용할 수 있어요');return;}L.a.push(b.dataset.a);}}setLook(L);});
@@ -458,7 +464,7 @@ $('#adminGo').addEventListener('click',async()=>{const v=$('#adminIn').value.tri
 $('#adminOff').addEventListener('click',async()=>{ADMIN_ON=false;document.body.classList.remove('teacher');LS.set('adminOn',false);if(DB&&MYID!=='me'){try{await DB.doc('members/'+MYID).set({admin:''});}catch(e){}}renderAdmin();renderPlaylist();renderBoard();});
 $('#logoutBtn').addEventListener('click',()=>{if(!confirm('이 기기에서 닉네임과 캐릭터를 지우고 처음부터 다시 정할까요?'))return;['nick','avatar','look','pet','pwok','pwk','prologue'].forEach(k=>LS.set(k,''));location.reload();});
 
-$('#sndTile').addEventListener('click',()=>openSheet('sound'));renderSoundUI();
+$('#sndTile').addEventListener('click',()=>{initAudio&&initAudio();setSound(!SND.on);renderSoundUI();toast(SND.on?'🔊 소리를 켰어요':'🔇 소리를 껐어요<small>소리 고르기에서 음악·자연의 소리를 바꿀 수 있어요</small>');});renderSoundUI();
 
 /* ---------- start ---------- */
 $('#loadTxt').textContent='';
