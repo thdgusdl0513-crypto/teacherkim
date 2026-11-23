@@ -1,4 +1,4 @@
-/* 송현학당 타이머 안의 PNG 반려 친구 UI. 기존 학당 디자인과 CSS 애니메이션 유지. */
+/* 몽원학당 타이머 안의 PNG 반려 친구 UI. 기존 학당 디자인과 CSS 애니메이션 유지. */
 .fc-panel{box-sizing:border-box;margin:3px 0 10px;padding:7px 9px;border:1px solid rgba(143,106,76,.25);border-radius:14px;background:rgba(255,250,239,.56);color:#73513d;}
 .fc-panel *, .fc-panel *::before,.fc-panel *::after{box-sizing:border-box}
 .fc-inline{display:flex;gap:9px;align-items:center;min-height:59px}

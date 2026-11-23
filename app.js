@@ -49,12 +49,10 @@ SEASON=curSeason();
 /* ---------- player ---------- */
 let me=makeAvatar(ST.avatar||'girl',ST.look);scene.add(me.root);
 let myPet=null;
-// The six focus companions are transparent PNGs (never GLB/3D meshes).
-const PNG_FOCUS_PET_IDS=new Set(['haetae','gumiho','cerberus','phoenix','jangseung','jangseung-m','jangseung-f','kkachi']);
 function setPet(id,quiet){
   if(myPet){scene.remove(myPet.root);myPet=null;}
   ST.pet=cleanPetSelection(id);LS.set('pet',ST.pet);
-  myPet=PNG_FOCUS_PET_IDS.has(ST.pet)?null:makePet(ST.pet);
+  myPet=makePet(ST.pet);
   if(myPet){const p=me.root.position;myPet.root.position.set(p.x+1,0,p.z+.7);scene.add(myPet.root);}
   if(typeof window.renderFocusCompanion==='function')window.renderFocusCompanion();
   if(!quiet){saveMember();pushPresence(true);}
@@ -362,8 +360,17 @@ hold('#rotL',()=>{camYaw+=.08;poseUntil=0;});hold('#rotR',()=>{camYaw-=.08;poseU
 function showFace(ms){path=[];poseUntil=performance.now()+(ms||4200);}
 function updateCam(dt,snap){const p=me.root.position;const pose=performance.now()<poseUntil;let yaw=camYaw,d=ST.space==='campus'?camDist:Math.min(camDist,10),pt=pitch,ly=1.1,ahead=1.4;
   const seatedV=ST.sitting>=0&&document.body.classList.contains('seated');
-  if(!pose&&ST.sitting>=0){if(seatedV){const top=p.y+me.h+(TM.run||elapsed()>0?1.9:.6),bot=p.y-.15,half=(top-bot)/2*1.3;const fit=half/Math.tan(camera.fov*Math.PI/360)/Math.max(.6,Math.min(1,camera.aspect*1.6));d=Math.max(2.2,fit*(camDist/8));pt=Math.max(.02,Math.min(1.1,pitch));ly=(top+bot)/2;}else{d=Math.min(d,5.5);pt=Math.min(pt,.32);ly=p.y+me.h*.5;}ahead=0;}
-  if(pose){if(ST.sitting>=0){yaw=SP.seats[ST.sitting].ry+PI+.45;}d=ST.sitting>=0?(seatedV?6.2:4.8):3.3;pt=ST.sitting>=0?.3:.14;ly=ST.sitting>=0?(seatedV?p.y+.05:p.y+me.h*.45):p.y+me.h*.6;ahead=0;}
+  const seat=(ST.sitting>=0&&SP&&SP.seats)?SP.seats[ST.sitting]:null;
+  if(!pose&&ST.sitting>=0){if(seatedV){
+    if(seat)yaw=seat.ry+PI+.32;
+    if(ST.space==='campus'){
+      d=Math.max(11.8,camDist*1.08);pt=.46;ly=p.y+1.25;ahead=2.55;
+    }else{
+      const top=p.y+me.h+(TM.run||elapsed()>0?1.45:.82),bot=p.y-.22,half=(top-bot)/2*1.1;const fit=half/Math.tan(camera.fov*Math.PI/360)/Math.max(.72,Math.min(1,camera.aspect*1.2));
+      d=Math.max(6.6,fit*(camDist/7.2));pt=Math.max(.26,Math.min(.68,pitch||.42));ly=(top+bot)/2+.15;ahead=1.15;
+    }
+  }else{d=Math.min(d,5.5);pt=Math.min(pt,.32);ly=p.y+me.h*.5;ahead=0;}}
+  if(pose){if(ST.sitting>=0){yaw=(seat?seat.ry:0)+PI+.45;}d=ST.sitting>=0?(seatedV?(ST.space==='campus'?10.8:6.2):4.8):3.3;pt=ST.sitting>=0?(seatedV?(ST.space==='campus'?.42:.3):.3):.14;ly=ST.sitting>=0?(seatedV?(ST.space==='campus'?p.y+1.18:p.y+.05):p.y+me.h*.45):p.y+me.h*.6;ahead=seatedV&&ST.space==='campus'?2.1:0;}
   let dy=yaw-yawCur;dy=Math.atan2(Math.sin(dy),Math.cos(dy));yawCur+=snap?dy:dy*Math.min(1,dt*(pose?3.5:8));
   want.set(p.x+Math.sin(yawCur)*Math.cos(pt)*d,(seatedV&&!pose?ly:p.y+.8)+Math.sin(pt)*d,p.z+Math.cos(yawCur)*Math.cos(pt)*d);
   if(ST.space!=='campus'){want.y=Math.min(want.y,4.1);want.x=Math.max(-7.4,Math.min(7.4,want.x));want.z=Math.max(-6.5,want.z);}
@@ -489,6 +496,13 @@ function closeSheets(){$$('.modal').forEach(m=>m.classList.remove('show'));}
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-close]'))closeSheets();else if(e.target.closest('[data-back]'))openSheet('menu');}));
 $('#menuBtn').addEventListener('click',()=>openSheet('menu'));
 $$('#menuGrid [data-open]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.open==='records')recTab='me';openSheet(b.dataset.open);}));
+function avatarLabelY(A){
+  const base=(A.h||2)+.2;
+  if(A.head&&A.gat&&A.gat.visible){
+    return Math.max(base,A.head.position.y+A.gat.position.y+.69);
+  }
+  return base;
+}
 function avatarUsesLook(a){return !!(a&&(a.dragonColor||a.type==='dino'));}
 function updateMe(){const a=AVMAP[ST.avatar]||AVMAP.girl||AVATARS[0];if(!a)return;const im=thumbOf('av',a.id,avatarUsesLook(a)?ST.look:null);$('#meEmo').innerHTML=im?`<img src="${im}" alt="${esc(a.name)} 캐릭터 얼굴">`:a.emo;$('#meNick').textContent=ST.nick||'이름 없는 학생';$('#meAv').textContent=a.name+((a.noGat||a.type==='dino')?'':' · 갓 착용');}
 function avColorRow(key,label){const cur=(ST.look.c&&ST.look.c[key])||0;return `<div class="cRow"><span>${label}</span><div class="cSw">${PALETTE.map((p,i)=>`<button data-avc="${key}" data-ci="${i}" class="${i===cur?'on':''}${i?'':' def'}" title="${p[0]}" style="${i?`background:#${p[1].toString(16).padStart(6,'0')}`:''}"></button>`).join('')}</div></div>`;}
@@ -516,12 +530,24 @@ function renderAvatars(){
  const pg=$('#petGrid');if(pg)pg.innerHTML=SELECTABLE_PET_ORDER.map(id=>PETMAP[id]).filter(Boolean).map(p=>{
    const png=(typeof window.focusCompanionAsset==='function')?window.focusCompanionAsset(p.id):'';
    const im=p.id==='none'?'':(png||thumbOf('pet',p.id));
-   return `<button type="button" data-pet="${p.id}" class="${p.id===(ST.pet||'none')?'on':''}">${im?`<img src="${im}" alt="">`:'<span>🚶</span>'}${p.name}${p.desc?`<small>${p.desc}</small>`:''}</button>`;
+   return `<button type="button" data-pet="${p.id}" class="${p.id===(ST.pet||'none')?'on':''}">${im?`<img src="${im}" data-pet-preview="${p.id}" alt="">`:'<span>🚶</span>'}${p.name}${p.desc?`<small>${p.desc}</small>`:''}</button>`;
  }).join('');
  $('#avGrid').innerHTML=html;
  const ia=$('#introAv');if(ia)ia.innerHTML=html;
  renderAvatarColorBoxes();
 }
+// PNG 경로 오류나 캐시 지연이 생겨도 캐릭터 선택 그림이 비지 않도록 복구.
+const petPreviewGrid=document.getElementById('petGrid');
+if(petPreviewGrid)petPreviewGrid.addEventListener('error',event=>{
+  const img=event.target;if(!img.matches||!img.matches('img[data-pet-preview]'))return;
+  const id=img.dataset.petPreview;
+  if(img.dataset.retried!=='1'){
+    img.dataset.retried='1';const pic=thumbOf('pet',id);
+    if(pic&&img.src!==pic){img.src=pic;return;}
+  }
+  const fallback=document.createElement('span');fallback.textContent='🧸';
+  img.replaceWith(fallback);
+},true);
 $('#nickSave').addEventListener('click',()=>{const v=$('#nickEdit').value.trim().slice(0,12);if(!v){$('#nickEdit').focus();return;}if(window.BadWords&&BadWords.check(v)){toast('고운 말로 된 닉네임을 써 주세요 🙂');return;}ST.nick=v;LS.set('nick',v);saveMember();pushPresence(true);updateMe();toast('닉네임을 「'+esc(v)+'」(으)로 바꿨어요');});
 $('#avGrid').addEventListener('click',e=>{const b=e.target.closest('[data-av]');if(!b)return;setAvatar(b.dataset.av);renderAvatars();toast(AVMAP[b.dataset.av].name+'(으)로 변신했어요');});
 $('#petGrid').addEventListener('click',e=>{const b=e.target.closest('[data-pet]');if(!b)return;setPet(b.dataset.pet);renderAvatars();toast(b.dataset.pet==='none'?'혼자 다니기로 했어요':PETMAP[b.dataset.pet].name+'이(가) 졸졸 따라와요');});
@@ -720,7 +746,7 @@ function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta()
     doorCool-=dt;if(doorCool<=0)for(const d of SP.doors){if(Math.hypot(d.x-P.x,d.z-P.z)<(ST.space==='campus'?1.1:.8)){if(d.to==='campus')enterSpace('campus',DOORS[ST.space].back);else enterSpace(d.to);doorCool=9;break;}}}
   else{doorCool-=dt;if(performance.now()<poseUntil&&ST.sitting<0){let da=yawCur+PI-me.root.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));me.root.rotation.y+=da*Math.min(1,dt*6);}}
   speedNow+=((len>.001&&ST.sitting<0?1:0)-speedNow)*Math.min(1,dt*10);walkPh+=dt*12*speedNow;animateAvatar(me,walkPh,speedNow,t,ST.sitting>=0);emoteTick(me,dt);emoteFxTick(dt);const nowP=performance.now();faceTick(me,nowP,emoteFace(me)||(ST.fx==='base'&&TM.run?'focus':ST.fx));if(myPet){petFollow(myPet,ST.sitting>=0?petAnchor(me.root):me.root,dt,t,SP.bounds);faceTick(myPet,nowP,'base');}
-  me.reading=ST.sitting>=0&&!!TM.run&&!!(me.book&&me.book.visible);if(ST.sitting<0){let py=0;(SP.plat||[]).forEach(q=>{if(P.x>q[0]&&P.x<q[1]&&P.z>q[2]&&P.z<q[3])py=q[4];});P.y+=(py-P.y)*Math.min(1,dt*12);}myLabel.sprite.position.set(P.x,P.y+me.h+.2,P.z);{const run=TM.run||(TM.acc>0&&ST.sitting>=0);myClock.sprite.visible=run;if(run){const e=elapsed();myClock.set(fmtClock(e),TM.run?`오늘 ${todayTot(MYID,Math.floor(e/60000))}분`:'일시정지',LS.get('clockCol',0));myClock.sprite.position.set(P.x,P.y+me.h+.98,P.z);}myBubble.sprite.position.set(P.x,P.y+me.h+(run?1.8:.75),P.z);}if(myBubble.sprite.visible&&performance.now()>myBubble.until)myBubble.sprite.visible=false;
+  me.reading=ST.sitting>=0&&!!TM.run&&!!(me.book&&me.book.visible);if(ST.sitting<0){let py=0;(SP.plat||[]).forEach(q=>{if(P.x>q[0]&&P.x<q[1]&&P.z>q[2]&&P.z<q[3])py=q[4];});P.y+=(py-P.y)*Math.min(1,dt*12);}myLabel.sprite.position.set(P.x,P.y+avatarLabelY(me),P.z);{const run=TM.run||(TM.acc>0&&ST.sitting>=0);myClock.sprite.visible=run;if(run){const e=elapsed();myClock.set(fmtClock(e),TM.run?`오늘 ${todayTot(MYID,Math.floor(e/60000))}분`:'일시정지',LS.get('clockCol',0));myClock.sprite.position.set(P.x,P.y+avatarLabelY(me)+.78,P.z);}myBubble.sprite.position.set(P.x,P.y+avatarLabelY(me)+(run?1.6:.68),P.z);}if(myBubble.sprite.visible&&performance.now()>myBubble.until)myBubble.sprite.visible=false;
   // remotes
   const seatUsed=new Set();if(ST.sitting>=0)seatUsed.add(ST.sitting);let bumpN=0;
   Object.values(REMOTES).sort((a,b)=>String(a.peer).localeCompare(String(b.peer))).forEach(r=>{if(!r.A.root.visible||!r.pr)return;const R0=r.A.root,pr=r.pr;let sit=pr.st>=0&&SP.seats[pr.st];let tx=sit?sit.x:+pr.x,tz=sit?sit.z:+pr.z,ty=sit?Math.max(0,sit.h-sitDrop(r.A)):0;
@@ -730,7 +756,7 @@ function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta()
     r.amt+=((d>.05&&!sit?1:0)-r.amt)*Math.min(1,dt*8);r.ph+=dt*12*r.amt;animateAvatar(r.A,r.ph,r.amt,t,!!sit);emoteTick(r.A,dt);const fx=FACES.some(f=>f[0]===pr.fx)?pr.fx:'base';faceTick(r.A,nowP,emoteFace(r.A)||(fx==='base'&&pr.rd?'focus':fx));if(r.A.book)r.A.book.visible=!!sit&&((!!ROOMS[pr.sp]&&ROOMS[pr.sp].study)||!!pr.rd);r.A.reading=!!pr.rd&&!!sit;
     const lab=focusSub(r.by,pr.rd?Math.max(0,Math.floor((Date.now()-pr.rd)/60000)):-1);const nm=nameOf(r.by,typeof pr.nk==='string'?pr.nk.slice(0,12):'');if(r.lastLabel!==nm+lab){r.L.set(nm,lab);r.lastLabel=nm+lab;}
     if(r.pet){petFollow(r.pet,(r.pr&&r.pr.st>=0)?petAnchor(R0):R0,dt,t,SP.bounds);faceTick(r.pet,nowP,'base');}
-    r.L.sprite.position.set(R0.position.x,R0.position.y+r.A.h+.2,R0.position.z);{if(pr.bk&&!r.bike&&typeof bikeMesh==='function'){r.bike=bikeMesh(0xd8504a);r.A.root.add(r.bike);}if(r.bike)r.bike.visible=!!pr.bk;if(!r.C){r.C=makeGlassClock();scene.add(r.C.sprite);}const run=!!pr.rd;r.C.sprite.visible=run;if(run){const e=Date.now()-pr.rd;r.C.set(fmtClock(e),`오늘 ${todayTot(r.by,Math.floor(e/60000))}분`,pr.cc);r.C.sprite.position.set(R0.position.x,R0.position.y+r.A.h+.98,R0.position.z);}r.B.sprite.position.set(R0.position.x,R0.position.y+r.A.h+(run?1.8:.75),R0.position.z);}if(r.B.sprite.visible&&performance.now()>r.B.until)r.B.sprite.visible=false;});
+    r.L.sprite.position.set(R0.position.x,R0.position.y+avatarLabelY(r.A),R0.position.z);{if(pr.bk&&!r.bike&&typeof bikeMesh==='function'){r.bike=bikeMesh(0xd8504a);r.A.root.add(r.bike);}if(r.bike)r.bike.visible=!!pr.bk;if(!r.C){r.C=makeGlassClock();scene.add(r.C.sprite);}const run=!!pr.rd;r.C.sprite.visible=run;if(run){const e=Date.now()-pr.rd;r.C.set(fmtClock(e),`오늘 ${todayTot(r.by,Math.floor(e/60000))}분`,pr.cc);r.C.sprite.position.set(R0.position.x,R0.position.y+avatarLabelY(r.A)+.78,R0.position.z);}r.B.sprite.position.set(R0.position.x,R0.position.y+avatarLabelY(r.A)+(run?1.6:.68),R0.position.z);}if(r.B.sprite.visible&&performance.now()>r.B.until)r.B.sprite.visible=false;});
   SP.tick.forEach(f=>f(t,dt));
   if(tapT>0){tapT=Math.max(0,tapT-dt*1.4);tapRing.material.opacity=tapT*.9;tapRing.scale.setScalar(1+(1-tapT)*1.2);}
   if(performance.now()-presT>150)flushPresence();

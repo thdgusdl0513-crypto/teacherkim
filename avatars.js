@@ -805,6 +805,7 @@ function sdTailTip(tail,mat,kind='tuft'){
 }
 function sdDorsalBumps(A,mat,count=4,baseY=1.13,baseZ=.16){for(let i=0;i<count;i++)sdBall(A.bob,.06+Math.sin((i+1)/(count+1)*PI)*.02,mat,0,baseY-i*.09,baseZ+i*.10,1.0,.74,.8);}
 function sdTuneAnchors(A,cfg){
+  A.headAnchorLift=0;A.accAnchorLift=0;
   if(cfg.type==='bird'){A.fit.y1=cfg.crane?1.02:.98;A.fit.neck=cfg.crane?1.32:1.15;A.fit.sleeve=[.08,1.02,-.08];}
   else if(cfg.type==='dino'){A.fit.y1=1.00;A.fit.neck=1.15;A.fit.sleeve=[.12,1.00,-.10];}
   else if(cfg.sp==='dragon'){A.fit.y1=1.02;A.fit.neck=1.18;A.fit.sleeve=[.10,1.04,-.10];}
@@ -812,8 +813,8 @@ function sdTuneAnchors(A,cfg){
   else if(cfg.sp==='cat'){A.fit.y1=1.06;A.fit.neck=1.20;}
   else if(cfg.sp==='dog'){A.fit.y1=1.08;A.fit.neck=1.22;}
   if(A.gat){
-    if(cfg.type==='human'){A.gat.position.y=.8;A.gat.scale.set(1,1,1);} 
-    else if(cfg.sp==='cat'||cfg.sp==='dog'){A.gat.position.y=.76;A.gat.scale.set(.95,.95,.95);} 
+    if(cfg.type==='human'){A.gat.position.y=(A.headR||.445)*.96;A.gat.scale.set(.88,.88,.88);A.gat.rotation.x=-.06;A.headAnchorLift=.08;A.accAnchorLift=.05;} 
+    else if(cfg.sp==='cat'||cfg.sp==='dog'){A.gat.position.y=(A.headR||.45)*.98;A.gat.scale.set(.90,.90,.90);} 
     else A.gat.visible=false;
   }
   if(A.book){A.book.position.y=A.bookY=cfg.crane?.82:(cfg.type==='bird'||cfg.type==='dino'||cfg.sp==='dragon')?.86:.91;}
@@ -829,11 +830,14 @@ function sdTuneAnchors(A,cfg){
 }
 function sdBuildHuman(A,cfg,col){
   const hair=sdMat(cfg.fem?0x49352e:0x70503a);
-  const cap=new THREE.Mesh(new THREE.SphereGeometry(A.headR*1.045,32,20,0,PI*2,0,PI*.54),hair);
-  cap.position.y=.035;cap.scale.set(1.04,1,.99);A.head.add(cap);
-  for(let i=0;i<5;i++)sdBall(A.head,.092,hair,(i-2)*.15,.27-(i%2)*.025,-.27,1.08,.58,.82);
+  const cap=new THREE.Mesh(new THREE.SphereGeometry(A.headR*1.04,32,20,0,PI*2,0,PI*.50),hair);
+  cap.position.y=.11;cap.scale.set(1.05,.98,.97);A.head.add(cap);
+  const bangY=.40,bangZ=-.17;
+  [[-.27,bangY-.01,-.17,.10],[ -.14,bangY+.01,-.19,.096],[0,bangY+.02,-.205,.094],[.14,bangY+.01,-.19,.096],[.27,bangY-.01,-.17,.10]].forEach(([x,y,z,r])=>{
+    sdBall(A.head,r,hair,x,y,z,1.02,.54,.72);
+  });
   if(cfg.fem){for(const s of [-1,1]){
-    sdBall(A.head,.16,hair,s*.38,-.13,.11,.55,1.6,.8);
+    sdBall(A.head,.14,hair,s*.39,-.10,.11,.52,1.46,.78);
   }}
   A.h=2.17;
 }

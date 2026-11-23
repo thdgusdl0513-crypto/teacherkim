@@ -28,8 +28,26 @@
   const status=document.getElementById('focusCompanionStatus');
   if(!image||!panel||!chooser||!toggle||!portrait||!name||!status)return;
   const pngUrl=id=>PREFIX+id+'.png';
+  const thumbUrl=petId=>typeof window.thumbOf==='function'?window.thumbOf('pet',petId):'';
   window.focusCompanionAsset=petId=>LOOKUP[petId]?pngUrl(LOOKUP[petId].id):'';
+  window.focusCompanionThumb=petId=>thumbUrl(petId);
   window.focusCompanionOptions=OPTIONS.map(({id,name})=>({id,name}));
+  function applyImage(img,src,fallback,alt,state,charId){
+    if(!img)return;
+    img.onerror=null;
+    img.dataset.failed='';
+    img.alt=alt||'';
+    if(charId)img.dataset.character=charId;
+    if(state)img.dataset.state=state;
+    img.onerror=()=>{
+      if(fallback&&img.dataset.failed!=='1'&&img.getAttribute('src')!==fallback){
+        img.dataset.failed='1';img.setAttribute('src',fallback);return;
+      }
+      img.closest('.fc-portrait,.fc-mini,.fc-choice-preview')?.setAttribute('data-missing','1');
+    };
+    img.closest('.fc-portrait,.fc-mini,.fc-choice-preview')?.removeAttribute('data-missing');
+    if(img.getAttribute('src')!==src)img.setAttribute('src',src);
+  }
   function stateOfTimer(){
     if(typeof TM==='undefined')return 'idle';
     if(TM.done&&TM.sessionId)return 'success';
@@ -47,7 +65,9 @@
       b.dataset.companion=option.id;b.title=option.name;
       const preview=document.createElement('span');preview.className='fc-choice-preview';
       if(option.id!=='none'){
-        const img=document.createElement('img');img.src=pngUrl(option.id);img.alt='';img.loading='lazy';img.decoding='async';preview.appendChild(img);
+        const img=document.createElement('img');img.alt='';img.loading='lazy';img.decoding='async';
+        applyImage(img,pngUrl(option.id),thumbUrl(option.pet),option.name,'idle',option.id);
+        preview.appendChild(img);
       }else preview.textContent='—';
       const label=document.createElement('span');label.textContent=option.name;
       b.append(preview,label);fragment.appendChild(b);
@@ -67,14 +87,12 @@
     portrait.hidden=!current;
     if(mini)mini.hidden=!current;
     if(current){
-      const src=pngUrl(current.id);
-      if(image.getAttribute('src')!==src)image.setAttribute('src',src);
-      image.alt=current.name;
-      image.dataset.character=current.id;
+      const src=pngUrl(current.id),fallback=thumbUrl(current.pet);
+      applyImage(image,src,fallback,current.name,state,current.id);
       // Reapply CSS state so success/paused transitions do not reuse stale animations.
       image.dataset.state=state;
       if(miniImage){
-        if(miniImage.getAttribute('src')!==src)miniImage.setAttribute('src',src);
+        applyImage(miniImage,src,fallback,current.name,state,current.id);
         miniImage.dataset.character=current.id;miniImage.dataset.state=state;
       }
     }
@@ -112,11 +130,7 @@
       previousKey='';render();
     }
   });
-  image.addEventListener('error',()=>{
-    // Missing PNG must not stop the focus timer.
-    portrait.hidden=true;if(mini)mini.hidden=true;
-    status.textContent='반려 친구 그림을 불러오지 못했어요';
-  });
+  // Per-image fallback is handled in applyImage(); do not hide the panel on the first load error.
   buildPicker();render();
   window.renderFocusCompanion=render;
 })();

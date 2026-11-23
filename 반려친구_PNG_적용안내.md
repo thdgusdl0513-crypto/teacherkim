@@ -1,16 +1,8 @@
-# 송현학당 · PNG 반려 친구 6종 (집중 타이머)
+# 송현학당 · 반려 친구 표시 안내
 
-- `index.html`에서 `focus-companions.css`, 원본 `companion-animations.css`를 로드합니다.
-- 기존의 메인 아바타 (`ST.avatar`, `AVATARS`)와 반려 친구 (`ST.pet`, `PETS`)는 **분리**되어 있습니다.
-- `focus-companions.js`는 집중 타이머 패널에서 6종을 선택/표시하고, 기존 `TM` 상태를 읽어 `idle/focus/rest/paused/success`에 연결합니다.
-- **PNG로 전환한 여섯 친구는 Three.js 동반 펫 모델을 새로 생성하지 않습니다.** 다른 기존 펫은 기존 3D 방식을 유지합니다.
-- 기존에 선택한 `jangseung-m`, `jangseung-f`는 둘 다 한 쌍이 그려진 `jangseung.png`로 보이며, 새 선택지 `jangseung`도 추가되었습니다.
-- 기존 까치 ID `kkachi`는 `magpie.png`를 사용합니다.
-- 원본 CSS는 `assets/companions/companion-animations.css`에 **변경 없이** 포함했습니다.
-- 기존 타이머의 `startTime`, 완료 기록, 로컬 로그와 Firebase 관련 로직은 변경하지 않았습니다. 선택 반려 친구는 기존 `ST.pet` 데이터 경로를 사용합니다.
-- 집중 화면: 타이머 시작 전=rest, 진행=focus, 일시정지=paused, 완료=success. 자리에서 일어난 상태=idle.
-- 설치: 압축을 푼 뒤 파일과 폴더를 GitHub 저장소 최상위에 업로드하세요. `index.html`과 `assets/companions/` 경로를 함께 유지해야 합니다.
-- 브라우저에서 전체 기능과 Firebase 실사용 계정 테스트는 배포 뒤 별도 확인이 필요합니다.
-
-- 타이머에서 **친구 선택**을 누르면 PNG 6종을 직접 고를 수 있고, 타이머를 최소화한 동안에도 작은 반려 친구가 옆에 표시됩니다.
-- 모바일/태블릿에서 선택창이 열렸을 때 세로 스크롤이 가능합니다.
+- 반려 친구 6종의 PNG 파일은 `assets/companions/characters/`에 있으며 선택 메뉴와 집중 타이머에 표시됩니다.
+- 원본 `assets/companions/companion-animations.css`와 `focus-companions.css`가 기본·집중·휴식·일시정지·완료 애니메이션을 담당합니다.
+- 기존 `pets.js`의 Three.js 반려 친구 모델은 **마당에 따라다니는 장면**에 그대로 사용합니다. GLB 파일이나 유료 서비스는 사용하지 않습니다.
+- PNG 로드가 실패하면 기존 3D 캐릭터 썸네일로 자동 대체합니다. 캐릭터가 없어도 타이머는 정상 진행됩니다.
+- 메인 캐릭터 8종 및 반려 친구 6종은 서로 별도 선택 목록으로 운영합니다.
+- 타임스탬프 집중 타이머 및 Firebase 데이터 키는 그대로 유지합니다.
