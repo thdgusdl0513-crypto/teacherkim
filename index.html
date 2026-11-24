@@ -76,6 +76,8 @@ body.seated #hint,body.seated #action{display:none!important}
 #fade{position:fixed;inset:0;background:#2a1c14;opacity:0;pointer-events:none;transition:opacity .38s;z-index:12}#fade.on{opacity:1}
 .modal{position:fixed;inset:0;height:100%;height:100dvh;background:rgba(40,22,10,.35);display:none;align-items:flex-end;justify-content:center;z-index:20}
 .modal.show{display:flex}
+#tnPop{position:fixed;inset:0;z-index:80;background:rgba(40,22,10,.45);display:flex;align-items:center;justify-content:center;padding:20px;animation:tnIn .25s}@keyframes tnIn{from{opacity:0}}.tnCard{background:#fff8ec;border-radius:20px;padding:22px 20px 16px;max-width:340px;width:100%;text-align:center;box-shadow:0 12px 30px rgba(40,20,5,.35);border:2px solid #e0a64a;color:#3a2618}.tnIco{font-size:38px;margin-bottom:6px}.tnCard b{font-size:17px;line-height:1.5;display:block}.tnCard p{margin:10px 0 14px;padding:10px 12px;background:#fff1c9;border-radius:10px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:keep-all;text-align:left}.tnBtns{display:flex;gap:8px}.tnBtns button{flex:1;padding:11px 6px;border-radius:12px;font-size:14px}
+.note.tNotice{outline:3px solid #e0a64a;outline-offset:2px}.tnTag{display:inline-block;font-style:normal;font-size:12px;font-weight:700;background:#e0a64a;color:#fff;border-radius:8px;padding:2px 8px;margin-bottom:6px}#bNoticeRow{margin:6px 0;font-size:13px;display:flex;align-items:center;gap:6px}#bNoticeRow[hidden]{display:none}#bNoticeRow input{width:auto;margin:0}
 .sheet{width:100%;max-width:540px;max-height:88vh;max-height:88dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:24px 24px 0 0;border-bottom:0;padding:14px 18px calc(22px + env(safe-area-inset-bottom));user-select:text;-webkit-user-select:text;touch-action:pan-y;animation:up .28s ease}
 @keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
 .grip{width:44px;height:5px;border-radius:3px;background:rgba(140,96,60,.35);margin:0 auto 10px}
@@ -331,6 +333,7 @@ body.seated #hint,body.seated #action{display:none!important}
   <div class="me-card"><span class="av" id="meEmo">👧</span><span><b id="meNick">나</b><small id="meAv"></small></span></div>
   <div id="menuGrid">
     <button data-open="stamp"><span>🔖</span>출석도장</button>
+    <button id="ldTile" type="button" onclick="openLadder('menu')"><span>🪜</span>사다리 타기</button>
     <button data-open="counsel" id="csTile"><span>💬</span>상담 신청</button>
     <button data-open="map"><span>🗺</span>학당 지도</button>
     <button data-open="records"><span>📒</span>기록장</button>
@@ -422,7 +425,7 @@ body.seated #hint,body.seated #action{display:none!important}
 <div id="callPop" class="paper"><div id="callTxt"></div><div class="cpBtns"><button class="ghost" id="callNo">나중에</button><button class="primary" id="callGo">가기</button></div></div>
 <div id="board" class="modal"><div class="sheet paper"><div class="grip"></div>
   <div class="sh"><span>📌 기숙사 게시판</span><button class="x" data-close>×</button></div>
-  <div id="bWrite"><textarea id="bText" maxlength="300" placeholder="친구들에게 남길 쪽지 (스터디 모집, 책 추천, 응원 한마디…)"></textarea><div id="bColors"><button class="on"></button><button></button><button></button><button></button><button></button></div><button class="primary" id="bSave">쪽지 붙이기</button></div>
+  <div id="bWrite"><textarea id="bText" maxlength="300" placeholder="친구들에게 남길 쪽지 (스터디 모집, 책 추천, 응원 한마디…)"></textarea><div id="bColors"><button class="on"></button><button></button><button></button><button></button><button></button></div><label id="bNoticeRow" hidden><input type="checkbox" id="bNotice" checked> 📢 공지로 올리기 (학생들이 들어올 때 알림이 떠요)</label><button class="primary" id="bSave">쪽지 붙이기</button></div>
   <div id="bList"></div>
 </div></div>
 
@@ -607,7 +610,7 @@ body.seated #hint,body.seated #action{display:none!important}
 <script>
 (async function(){
   try{await Promise.race([Promise.all([document.fonts.load('800 80px "Nanum Myeongjo"','雲書學堂閣基礎魔法靈藥溫和寮體力勅令符天地玄黃第一講藥草園天下大將軍地女'),document.fonts.load('30px "Gowun Batang"','가나다 마법')]),new Promise(r=>setTimeout(r,2500))]);}catch(e){}
-  try{for(const s of ['words.js','core.js','avatars.js','wardrobe.js','emotes.js','pets.js','spaces.js','sound.js','prologue.js','app.js','focus-companions.js','profile.js','focus-alarm.js','letters.js','planner.js','class.js','quotes.js','campus.js']){await new Promise((res,rej)=>{const el=document.createElement('script');el.src=s+'?v=20261124-teacher-table';el.onload=res;el.onerror=()=>rej(new Error(s+' 불러오기 실패'));document.body.appendChild(el);});}}
+  try{for(const s of ['words.js','core.js','avatars.js','wardrobe.js','emotes.js','pets.js','spaces.js','sound.js','prologue.js','app.js','focus-companions.js','profile.js','focus-alarm.js','letters.js','ladder.js','planner.js','class.js','quotes.js','campus.js']){await new Promise((res,rej)=>{const el=document.createElement('script');el.src=s+'?v=20261124-notice';el.onload=res;el.onerror=()=>rej(new Error(s+' 불러오기 실패'));document.body.appendChild(el);});}}
   catch(e){document.getElementById('loadTxt').textContent='학당을 열지 못했어요: '+e.message;}
 })();
 window.addEventListener('error',e=>{const l=document.getElementById('loadTxt');if(l)l.textContent='오류: '+e.message;});
