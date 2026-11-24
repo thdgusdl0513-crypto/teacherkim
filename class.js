@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded',()=>{});
     const rooms={};$$('#tRooms [data-room]').forEach(i=>{const v=i.value.trim().slice(0,14);if(v)rooms[i.dataset.room]=v;});
     const boards={};$$('#tBoards [data-bd]').forEach(i=>{const v=i.value.trim().slice(0,40);if(v){(boards[i.dataset.bd]=boards[i.dataset.bd]||{})[i.dataset.bi]=v;}});
     const v={boards,rooms,chat:$('#tChat').value,ch:[+$('#tCh0').value,+$('#tCh1').value],lock:$('#tLock').value,lk:[+$('#tLk0').value,+$('#tLk1').value],rsv:rsvClean($('#tRsv').value),ts:Date.now()};if($('#tRsv').value.trim()&&!v.rsv){toast('웹 앱 주소를 확인해 주세요<small>https://script.google.com/macros/s/…/exec 모양이에요</small>');return;}
-    try{await DB.doc('settings/class').set(v);toast('학급 설정을 저장했어요<small>학생들 화면에도 바로 바뀌어요</small>');if(v.rsv)setTimeout(()=>rsvCheckNow(v.rsv),700);}catch(e){toast('저장하지 못했어요<small>선생님 암호로 들어왔는지 확인해 주세요</small>');}});})();
+    try{await DB.doc('settings/class').set(v);toast('학급 설정을 저장했어요<small>학생들 화면에도 바로 바뀌어요</small>');setTimeout(()=>{if(window.__tRsvStat)__tRsvStat(true);},700);}catch(e){toast('저장하지 못했어요<small>선생님 암호로 들어왔는지 확인해 주세요</small>');}});})();
 
 /* ---------- 간식 미션 · 학생 초기화 ---------- */
 let RESETV={},SNACKV={};let rsSub=false;
@@ -185,13 +185,27 @@ async function csSubmit(){const v=id=>($('#'+id)||{}).value||'';const no=v('csNo
   const tok=$('#tRsvTok');if(tok){tok.value=LS.get('rsvTok','');tok.addEventListener('change',()=>LS.set('rsvTok',tok.value));}
   async function tLoad(){const out=$('#tRsvBox');const u=rsvClean($('#tRsv').value)||rsvApi();if(!u){out.innerHTML='<div class="empty">웹 앱 주소를 먼저 넣어 주세요 (https://script.google.com/… 로 시작해요)</div>';return;}
     out.innerHTML='<div class="empty">확인하는 중…</div>';const tk=LS.get('rsvTok','');
-    try{const pub=await (await fetch(u+(u.includes('?')?'&':'?')+'t='+Date.now())).json();if(!pub.ok)throw new Error(pub.error||'');let html=`<div class="empty">✅ 연결됨 · 학생에게 보이는 열린 시간 <b>${(pub.slots||[]).length}</b>개${pub.rosterOn?' · 명단 확인 켜짐':''}${rsvApi()!==u?'<br>⚠️ 아직 저장 전이에요. 아래 ‘학급 설정 저장’을 눌러야 학생들에게 열려요.':''}</div>`;
+    try{const pub=await (await fetch(u+(u.includes('?')?'&':'?')+'t='+Date.now())).json();if(!pub.ok)throw new Error(pub.error||'');let html=`<div class="empty">✅ 연결됨 · 학생에게 보이는 열린 시간 <b>${(pub.slots||[]).filter(x=>!x.taken).length}</b>개${pub.rosterOn?' · 명단 확인 켜짐':''}${rsvApi()!==u?'<br>⚠️ 아직 저장 전이에요. 아래 ‘학급 설정 저장’을 눌러야 학생들에게 열려요.':''}</div>`;
       if(tk){const j=await (await fetch(`${u}${u.includes('?')?'&':'?'}action=admin&token=${encodeURIComponent(tk)}&t=${Date.now()}`)).json();if(!j.ok)throw new Error(j.error||'관리 암호 확인 실패');const t=dkey(new Date());const pend=(j.reqs||[]).filter(r=>r.status==='대기'&&r.date>=t).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
         html+=pend.length?pend.map(r=>`<div class="cMine"><b>${esc(csWhen(r))}</b> · ${esc(r.name)}(${esc(r.no)})${r.topic?`<br><small>${esc(r.topic)}</small>`:''}<br><button data-tdec="${esc(r.id)}" data-st="승인" style="background:#3f7f5a;color:#fff">승인</button><button data-tdec="${esc(r.id)}" data-st="거절" style="background:#eee">거절</button></div>`).join(''):'<div class="empty">승인 대기 중인 신청이 없어요.</div>';}
       out.innerHTML=html;}catch(e){out.innerHTML=`<div class="empty">⚠️ 연결하지 못했어요: ${esc(e.message||'주소와 배포 설정(액세스: 모든 사용자)을 확인해 주세요')}</div>`;}}
-  const chk=$('#tRsvChk');if(chk)chk.addEventListener('click',()=>{tLoad();rsvCheckNow(rsvClean($('#tRsv').value)?$('#tRsv').value:CLS.rsv);});
+  window.tLoadPub=tLoad;
   const tb=$('#tRsvBox');if(tb)tb.addEventListener('click',async e=>{const b=e.target.closest('[data-tdec]');if(!b)return;const st=b.dataset.st;const note=st==='거절'?(prompt('학생에게 보여 줄 메모 (선택)','')||''):'';const u=rsvClean($('#tRsv').value)||rsvApi();
     try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:LS.get('rsvTok',''),action:'decide',id:b.dataset.tdec,status:st,note})});const j=await r.json();if(!j.ok)throw new Error(j.error||'실패');toast(`${st}했어요${j.mailed==='ok'?'<small>학생에게 안내 메일을 보냈어요</small>':''}`);}catch(err){toast('처리하지 못했어요<small>'+esc(err.message)+'</small>');}tLoad();});})();
 
 /* 선생님: 입장하면 상담 웹 앱 연결을 한 번 확인해서 알려 줌 */
 (function(){let done=false;const t0=Date.now();const iv=setInterval(()=>{if(done)return clearInterval(iv);if(!window.__entered||document.getElementById('intro'))return;if(typeof ADMIN_ON==='undefined'||!ADMIN_ON){if(Date.now()-t0>60000){done=true;}return;}if(!clsSub||Date.now()-t0<6000)return;done=true;setTimeout(()=>{if(document.getElementById('tnPop'))return;rsvCheckNow(undefined,true);},1500);},1000);})();
+
+/* 선생님 화면: 웹 앱 주소 칸 바로 아래에 연결 상태 표시 */
+(function(){const inp=$('#tRsv'),st=$('#tRsvStat');if(!inp||!st)return;let seq=0,tm=0;
+  async function stat(pop){const my=++seq;const typed=inp.value.trim();const saved=rsvApi();const url=typed||saved;
+    if(!url){st.className='csConn bad';st.innerHTML='⚪ 웹 앱 주소가 없어요<small>주소를 넣고 아래 ‘학급 설정 저장’을 눌러 주세요.</small>';if(pop)rsvAlert({ok:false,title:'웹 앱 주소가 없어요',hint:'교무실 프로그램 상담 관리자에 넣은 <b>웹 앱 주소</b>를 붙여 넣고 ‘학급 설정 저장’을 눌러 주세요.'});return;}
+    st.className='csConn';st.innerHTML='⏳ 웹 앱에 연결해 보는 중…';const R=await rsvDiag(url);if(my!==seq)return;
+    const unsaved=rsvClean(typed)!==saved;const warn=unsaved?'<small>⚠️ 아직 저장 전이에요. ‘학급 설정 저장’을 눌러야 학생들에게 열려요.</small>':'<small>저장됨 · 학생들 상담 신청 창에 연결돼 있어요.</small>';
+    st.className='csConn '+(R.ok?'ok':'bad');st.innerHTML=(R.ok?'🟢 ':'🔴 ')+R.title+(R.ok?` · 열린 시간 ${R.n}개`:'')+(R.ok?warn:`<small>${R.hint}</small>`);
+    if(pop)rsvAlert(R,R.ok&&unsaved?'⚠️ 아직 저장 전이에요. 아래 <b>‘학급 설정 저장’</b>을 눌러야 학생들에게 열려요.':'');return R;}
+  window.__tRsvStat=stat;
+  inp.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(()=>stat(false),900);});
+  const md=$('#teacher');if(md){let was=false;new MutationObserver(()=>{const on=md.classList.contains('show');if(on&&!was)setTimeout(()=>stat(false),300);was=on;}).observe(md,{attributes:true,attributeFilter:['class']});}
+  const chk=$('#tRsvChk');if(chk){const nb=chk.cloneNode(true);chk.replaceWith(nb);nb.addEventListener('click',()=>{stat(true);try{tLoadPub&&tLoadPub();}catch(e){}});}
+})();

@@ -76,7 +76,7 @@ body.seated #hint,body.seated #action{display:none!important}
 #fade{position:fixed;inset:0;background:#2a1c14;opacity:0;pointer-events:none;transition:opacity .38s;z-index:12}#fade.on{opacity:1}
 .modal{position:fixed;inset:0;height:100%;height:100dvh;background:rgba(40,22,10,.35);display:none;align-items:flex-end;justify-content:center;z-index:20}
 .modal.show{display:flex}
-#tnPop,#rsvPop{position:fixed;inset:0;z-index:80;background:rgba(40,22,10,.45);display:flex;align-items:center;justify-content:center;padding:20px;animation:tnIn .25s}@keyframes tnIn{from{opacity:0}}.tnCard p b{display:inline;font-size:inherit;line-height:inherit}.rsvU{font-size:11px;color:#8a6a4a;word-break:break-all;margin:-4px 0 12px}.tnCard.bad{border-color:#d0603a}.tnCard.ok{border-color:#3f8a5a}.csConn{font-size:13px;padding:8px 10px;border-radius:10px;margin:0 0 10px;background:#f3ead8;color:#5a3a22}.csConn.ok{background:#e3f2e6;color:#2f6a40}.csConn.bad{background:#fbe3da;color:#9a3a20}.csConn button{font:inherit;font-size:12px;border:0;border-radius:8px;padding:3px 8px;margin-left:4px;background:#fff;cursor:pointer}
+#tnPop,#rsvPop{position:fixed;inset:0;z-index:80;background:rgba(40,22,10,.45);display:flex;align-items:center;justify-content:center;padding:20px;animation:tnIn .25s}@keyframes tnIn{from{opacity:0}}.tnCard p b{display:inline;font-size:inherit;line-height:inherit}.rsvU{font-size:11px;color:#8a6a4a;word-break:break-all;margin:-4px 0 12px}.tnCard.bad{border-color:#d0603a}.tnCard.ok{border-color:#3f8a5a}.csConn{font-size:13px;padding:8px 10px;border-radius:10px;margin:0 0 10px;background:#f3ead8;color:#5a3a22}.csConn.ok{background:#e3f2e6;color:#2f6a40}.csConn.bad{background:#fbe3da;color:#9a3a20}.csConn small{display:block;margin-top:3px;font-size:12px;opacity:.9}#tRsvStat{margin:6px 0 0}.csConn button{font:inherit;font-size:12px;border:0;border-radius:8px;padding:3px 8px;margin-left:4px;background:#fff;cursor:pointer}
 .tnCard{background:#fff8ec;border-radius:20px;padding:22px 20px 16px;max-width:340px;width:100%;text-align:center;box-shadow:0 12px 30px rgba(40,20,5,.35);border:2px solid #e0a64a;color:#3a2618}.tnIco{font-size:38px;margin-bottom:6px}.tnCard b{font-size:17px;line-height:1.5;display:block}.tnCard p{margin:10px 0 14px;padding:10px 12px;background:#fff1c9;border-radius:10px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:keep-all;text-align:left}.tnBtns{display:flex;gap:8px}.tnBtns button{flex:1;padding:11px 6px;border-radius:12px;font-size:14px}
 .note.tNotice{outline:3px solid #e0a64a;outline-offset:2px}.tnTag{display:inline-block;font-style:normal;font-size:12px;font-weight:700;background:#e0a64a;color:#fff;border-radius:8px;padding:2px 8px;margin-bottom:6px}#bNoticeRow{margin:6px 0;font-size:13px;display:flex;align-items:center;gap:6px}#bNoticeRow[hidden]{display:none}#bNoticeRow input{width:auto;margin:0}
 .sheet{width:100%;max-width:540px;max-height:88vh;max-height:88dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:24px 24px 0 0;border-bottom:0;padding:14px 18px calc(22px + env(safe-area-inset-bottom));user-select:text;-webkit-user-select:text;touch-action:pan-y;animation:up .28s ease}
@@ -410,9 +410,10 @@ body.seated #hint,body.seated #action{display:none!important}
     <div class="tHr" id="tLkH"><select id="tLk0"></select><span>에 닫고</span><select id="tLk1"></select><span>에 열어요</span></div>
     <div class="sec">💬 상담 신청 연결</div><div class="empty">교무실 프로그램 상담 관리자에 넣은 것과 같은 <b>웹 앱 주소</b>(https://script.google.com/macros/s/…/exec)를 넣고 저장하세요. 학생들은 메뉴의 ‘💬 상담 신청’에서 열어 둔 시간을 골라 바로 신청하고, 신청은 교무실 승인 목록으로 들어가요.</div>
     <input id="tRsv" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+    <div id="tRsvStat" class="csConn">⏳ 연결 상태를 확인하는 중…</div>
     <div class="empty" style="margin-top:6px">관리 암호를 넣으면 여기서도 승인 대기 목록을 보고 승인할 수 있어요. 암호는 <b>이 기기에만</b> 저장되고 학생들에게는 가지 않아요.</div>
     <input id="tRsvTok" type="password" placeholder="관리 암호 (선택)" autocomplete="off">
-    <button class="ghost" id="tRsvChk" type="button" style="margin-top:6px;width:100%">🔄 연결 확인 · 승인 대기 보기</button>
+    <button class="ghost" id="tRsvChk" type="button" style="margin-top:6px;width:100%">🔌 지금 연결 확인하기 · 승인 대기 보기</button>
     <div id="tRsvBox"></div>
     <button class="primary" id="tSave" style="margin-top:14px">학급 설정 저장</button>
     <div class="empty" style="margin-top:8px">선생님 화면과 설정은 선생님 암호로 들어온 기기에서만 보여요. 학생들 화면에는 나타나지 않아요.</div>
@@ -611,7 +612,7 @@ body.seated #hint,body.seated #action{display:none!important}
 <script>
 (async function(){
   try{await Promise.race([Promise.all([document.fonts.load('800 80px "Nanum Myeongjo"','雲書學堂閣基礎魔法靈藥溫和寮體力勅令符天地玄黃第一講藥草園天下大將軍地女'),document.fonts.load('30px "Gowun Batang"','가나다 마법')]),new Promise(r=>setTimeout(r,2500))]);}catch(e){}
-  try{for(const s of ['words.js','core.js','avatars.js','wardrobe.js','emotes.js','pets.js','spaces.js','sound.js','prologue.js','app.js','focus-companions.js','profile.js','focus-alarm.js','letters.js','ladder.js','planner.js','class.js','quotes.js','campus.js']){await new Promise((res,rej)=>{const el=document.createElement('script');el.src=s+'?v=20261124-rsvchk';el.onload=res;el.onerror=()=>rej(new Error(s+' 불러오기 실패'));document.body.appendChild(el);});}}
+  try{for(const s of ['words.js','core.js','avatars.js','wardrobe.js','emotes.js','pets.js','spaces.js','sound.js','prologue.js','app.js','focus-companions.js','profile.js','focus-alarm.js','letters.js','ladder.js','planner.js','class.js','quotes.js','campus.js']){await new Promise((res,rej)=>{const el=document.createElement('script');el.src=s+'?v=20261124-rsvchk2';el.onload=res;el.onerror=()=>rej(new Error(s+' 불러오기 실패'));document.body.appendChild(el);});}}
   catch(e){document.getElementById('loadTxt').textContent='학당을 열지 못했어요: '+e.message;}
 })();
 window.addEventListener('error',e=>{const l=document.getElementById('loadTxt');if(l)l.textContent='오류: '+e.message;});
