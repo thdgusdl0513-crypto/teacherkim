@@ -102,22 +102,29 @@ setInterval(snackPop,15000);
 function wipeLocal(t){const keep=['resetSeen','prologue','adminOn'];const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('songhyeon.')&&!keep.includes(k.slice(10)))ks.push(k);}ks.forEach(k=>localStorage.removeItem(k));LS.set('resetSeen',t);}
 function checkReset(){const t=Math.max(+RESETV.all||0,+RESETV['u_'+MYID]||0);if(!t)return;const seen=+LS.get('resetSeen',0);if(t<=seen)return;
   if(ADMIN_ON||LS.get('adminOn',false)){LS.set('resetSeen',t);return;}if(!LS.get('nick','')){LS.set('resetSeen',t);return;}
-  wipeLocal(t);toast('🧹 선생님이 학당 기록을 새로 시작했어요<small>잠시 뒤 처음 화면으로 돌아가요</small>');setTimeout(()=>location.reload(),1800);}
+  {const pk=LS.get('pkey','');if(pk&&!LS.get('pkeyT',0)&&DB){try{DB.doc('profiles/'+pk).delete();}catch(e){}}}wipeLocal(t);toast('🧹 선생님이 학당 기록을 새로 시작했어요<small>잠시 뒤 처음 화면으로 돌아가요</small>');setTimeout(()=>location.reload(),2200);}
 setInterval(()=>{if(!rsSub&&typeof DB!=='undefined'&&DB&&MODE==='shared'){rsSub=true;
   DB.doc('settings/reset').onSnapshot(d=>{RESETV=(d&&d.exists&&d.data())||{};checkReset();},()=>{});
   DB.doc('settings/snack').onSnapshot(d=>{SNACKV=(d&&d.exists&&d.data())||{};try{renderSnack();renderTeacher(true);}catch(e){}},()=>{});}},1500);
-async function resetStudents(ids,all){if(!DB||MODE!=='shared'){toast('학당이 연결돼 있어야 초기화할 수 있어요');return;}const S=new Set(ids);let n=0,fail=0;
-  for(const col of ['logs','books','quotes','board','playlist']){for(const d of (DATA[col]||[]).filter(x=>S.has(x.by))){try{await DB.collection(col).doc(d.id).delete();n++;}catch(e){fail++;}}}
-  for(const id of ids){try{await DB.doc('stamps/'+id).delete();}catch(e){fail++;}try{await DB.doc('members/'+id).delete();}catch(e){fail++;}delete MEMBERS[id];delete STAMPS[id];}
-  try{const now=Date.now();if(all)await DB.doc('settings/reset').set({all:now});else{const o={};ids.forEach(id=>o['u_'+id]=now);await DB.doc('settings/reset').set(o);}const so={};ids.forEach(id=>so[id]=null);}catch(e){fail++;}
-  toast(fail?`일부를 지우지 못했어요 (${fail}건)<small>Firebase 규칙을 새로 붙여 넣었는지 확인해 주세요</small>`:`🧹 ${ids.length}명을 초기화했어요<small>학생 화면은 처음 화면으로 돌아가요</small>`);renderTeacher(true);}
+async function resetStudents(ids,all){if(!DB||MODE!=='shared'){toast('학당이 연결돼 있어야 초기화할 수 있어요');return;}const S=new Set(ids);let n=0;const FAIL=[];
+  const del=async(path,label)=>{try{await DB.doc(path).delete();n++;}catch(e){FAIL.push(label+' ('+(e&&(e.code||e.message)||'오류')+')');}};
+  toast('🧹 초기화하는 중…<small>잠시만 기다려 주세요</small>');
+  for(const col of ['logs','books','quotes','board','playlist','gallery']){for(const d of (DATA[col]||[]).filter(x=>S.has(x.by))){await del(col+'/'+d.id,'기록 '+col);}}
+  for(const d of (DATA.warns||[]).filter(x=>S.has(x.by))){await del('warns/'+d.id,'고운 말 경고');}
+  const mbs=new Set();ids.forEach(id=>{const m=MEMBERS[id];if(m&&typeof m.mb==='string'&&m.mb)mbs.add(m.mb);});
+  for(const mb of mbs){await del('plans/'+mb,'계획표');await del('letters/'+mb,'편지함');}
+  for(const id of ids){await del('stamps/'+id,'출석 도장');await del('members/'+id,'학생 정보');delete MEMBERS[id];delete STAMPS[id];}
+  try{const now=Date.now();const o={};if(all)o.all=now;else ids.forEach(id=>o['u_'+id]=now);await DB.doc('settings/reset').update(o);}catch(e){FAIL.push('초기화 신호 ('+(e&&(e.code||e.message)||'오류')+')');}
+  try{const so={};ids.forEach(id=>so[id]=null);await DB.doc('settings/snack').update(so);}catch(e){}
+  if(FAIL.length){const u=[...new Set(FAIL)];const w=document.createElement('div');w.id='rsvPop';w.innerHTML=`<div class="tnCard bad"><div class="tnIco">⚠️</div><b>${FAIL.length}건을 지우지 못했어요</b><p style="text-align:left">${u.slice(0,8).map(esc).join('<br>')}<br><br>‘permission_denied’가 보이면 <b>Firebase 규칙</b>을 새 파일로 다시 게시하고, <b>선생님 코드로 들어왔는지</b> 확인해 주세요.</p><div class="tnBtns"><button class="primary" data-rsvx>확인</button></div></div>`;const old=document.getElementById('rsvPop');if(old)old.remove();document.body.appendChild(w);w.addEventListener('click',e=>{if(e.target.closest('[data-rsvx]')||e.target===w)w.remove();});}
+  else toast(`🧹 ${ids.length}명을 초기화했어요<small>학생 화면은 처음 화면으로 돌아가요</small>`);renderTeacher(true);}
 (function(){const bar=document.getElementById('tCsv');if(!bar)return;const b=document.createElement('button');b.className='ghost';b.id='tResetAll';b.textContent='🧹 전체 초기화';bar.after(b);
   b.addEventListener('click',()=>{if(!ADMIN_ON)return;const ids=classStats().filter(r=>!r.me).map(r=>r.id);if(!ids.length){toast('초기화할 학생이 없어요');return;}const v=prompt(`학생 ${ids.length}명의 출석·공부 기록·독후감·문장·캐릭터를 모두 지워요.\n되돌릴 수 없어요. 계속하려면 "초기화"라고 적어 주세요.`);if(v&&v.trim()==='초기화')resetStudents(ids,true);});
   document.getElementById('tBody').addEventListener('click',async e=>{
     const ids=k=>String(k||'').split(',').filter(Boolean);
     const r=e.target.closest('[data-treset]');if(r){const L=ids(r.dataset.treset);if(confirm(`${nameOf(L[0])} 학생의 기록(출석·공부·독후감 등)을 모두 지우고 처음부터 시작하게 할까요?`))resetStudents(L,false);return;}
     const fg=e.target.closest('[data-tforgive]');if(fg){if(!confirm('이 학생의 고운 말 경고를 모두 지울까요?'))return;const W=[];ids(fg.dataset.tforgive).forEach(id=>warnsOf(id).forEach(w=>{if(!W.some(x=>x.id===w.id))W.push(w);}));try{await Promise.all(W.map(w=>DB.collection('warns').doc(w.id).delete()));toast('경고를 지웠어요');}catch(err){toast('지우지 못했어요');}return;}
-    const g=e.target.closest('[data-tsnack]');if(g){const L=ids(g.dataset.tsnack);const on=!L.some(id=>SNACKV[id]);const o={};L.forEach(id=>o[id]=on?Date.now():null);try{await DB.doc('settings/snack').set(o);toast(on?'🍪 간식 준 것으로 표시했어요':'간식 표시를 취소했어요');}catch(err){toast('저장하지 못했어요');}return;}
+    const g=e.target.closest('[data-tsnack]');if(g){const L=ids(g.dataset.tsnack);const on=!L.some(id=>SNACKV[id]);const o={};L.forEach(id=>o[id]=on?Date.now():null);try{await DB.doc('settings/snack').update(o);toast(on?'🍪 간식 준 것으로 표시했어요':'간식 표시를 취소했어요');}catch(err){toast('저장하지 못했어요');}return;}
     const h=e.target.closest('[data-thide]');if(h){const H=LS.get('tHidden',{});const k=h.dataset.thide;if(H[k])delete H[k];else H[k]=Date.now();LS.set('tHidden',H);toast(H[k]?'명단에서 숨겼어요<small>‘숨김’ 칸에서 다시 볼 수 있어요</small>':'다시 보이게 했어요');tOpen='';renderTeacher(true);return;}
     const row=e.target.closest('[data-open-g]');if(row){tOpen=tOpen===row.dataset.openG?'':row.dataset.openG;renderTeacher(true);}});})();
 

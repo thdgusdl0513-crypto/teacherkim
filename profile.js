@@ -16,7 +16,7 @@ function applyProfile(p){if(!p)return;if(p.nick){ST.nick=String(p.nick).slice(0,
   if(p.ex&&typeof p.ex==='object')KEYS.forEach(k=>{if(p.ex[k]!=null)LS.set(k,p.ex[k]);});
   try{setAvatar(ST.avatar||'girl');}catch(e){}try{saveMember();}catch(e){}try{pushPresence(true);updateMe();}catch(e){}}
 function markPw(){try{if(DB&&MYID!=='me')DB.doc('members/'+MYID).set({pw:1});}catch(e){}}
-async function loadProfile(k){if(!DB)return null;try{const d=await DB.doc('profiles/'+k).get();return d&&d.exists?d.data():null;}catch(e){return null;}}
+async function loadProfile(k,isT){if(!DB)return null;try{const d=await DB.doc('profiles/'+k).get();const p=d&&d.exists?d.data():null;if(p){let ra=0;try{ra=+((typeof RESETV!=='undefined'&&RESETV)||{}).all||0;if(!ra){const r=await DB.doc('settings/reset').get();ra=+((r&&r.exists&&r.data())||{}).all||0;}}catch(e){}if(ra&&(+p.ts||0)<ra&&!isT){try{await DB.doc('profiles/'+k).delete();}catch(e){}return null;}}return p;}catch(e){return null;}}
 /* 캐릭터가 바뀔 때마다 함께 저장 */
 const _sm=saveMember;saveMember=function(){const r=_sm.apply(this,arguments);saveProfile(false);return r;};
 setInterval(()=>{if(window.__entered)saveProfile(false);},60000);
@@ -85,7 +85,7 @@ async function teacherIn(code,quiet){const ai=$q('#adminIn'),ag=$q('#adminGo');i
   while(Date.now()-t0<(quiet?4000:8000)&&!ADMIN_ON)await new Promise(r=>setTimeout(r,150));
   ai.value='';
   if(!ADMIN_ON){window.__tcBusy=false;if(!quiet)toast('❌ 선생님 코드가 맞지 않아요');return false;}
-  const k=await tkeyOf(code);LS.set('pkey',k);LS.set('pkeyT',1);const p=await loadProfile(k);
+  const k=await tkeyOf(code);LS.set('pkey',k);LS.set('pkeyT',1);const p=await loadProfile(k,true);
   if(p){applyProfile(p);toast('🧑‍🏫 선생님 캐릭터를 불러왔어요');}
   else{if(!ST.nick){ST.nick='선생님';LS.set('nick',ST.nick);}if(!ST.avatar){ST.avatar='girl';LS.set('avatar','girl');}saveMember();await saveProfile(true);toast('🧑‍🏫 선생님 모드 · 지금 캐릭터를 저장했어요<small>다른 곳에서도 선생님 코드로 들어오면 이 캐릭터예요</small>');}
   const w=$q('#welcome');if(w)w.textContent=(ST.nick||'선생님')+'님, 어서 오세요!';const ws=$q('#welcomeSub');if(ws)ws.textContent='선생님 모드가 켜졌어요.';window.__tcBusy=false;return true;}
@@ -93,7 +93,7 @@ window.__teacherIn=teacherIn;
 /* ‘다시 오셨네요’ 화면: 다른 코드로 들어가기 */
 const sIn=$q('#stepIn');if(sIn&&!$q('#tcGo2')){const b=document.createElement('button');b.type='button';b.className='go2';b.id='tcGo2';b.textContent='🔑 다른 코드로 들어가기';b.style.marginTop='8px';sIn.appendChild(b);b.addEventListener('click',()=>{['stepChoose','stepNick','stepIn'].forEach(s=>{const e=$q('#'+s);if(e)e.hidden=true;});const c=$q('#stepCode');if(c){c.hidden=false;setTimeout(()=>$q('#codeIn').focus(),100);}});}
 /* 설정의 관리자 코드로 켰을 때도 선생님 캐릭터 연결 */
-const ag=$q('#adminGo');if(ag)ag.addEventListener('click',()=>{const code=($q('#adminIn')||{}).value||'';if(!code)return;const t0=Date.now();const iv=setInterval(async()=>{if(ADMIN_ON){clearInterval(iv);if(window.__tcBusy)return;if(!LS.get('pkey','')||LS.get('pkeyT',0)!==1){const k=await tkeyOf(code);LS.set('pkey',k);LS.set('pkeyT',1);const p=await loadProfile(k);if(p&&(!window.__entered||confirm('저장해 둔 선생님 캐릭터를 불러올까요?')))applyProfile(p);else saveProfile(true);}}else if(Date.now()-t0>8000)clearInterval(iv);},200);},true);
+const ag=$q('#adminGo');if(ag)ag.addEventListener('click',()=>{const code=($q('#adminIn')||{}).value||'';if(!code)return;const t0=Date.now();const iv=setInterval(async()=>{if(ADMIN_ON){clearInterval(iv);if(window.__tcBusy)return;if(!LS.get('pkey','')||LS.get('pkeyT',0)!==1){const k=await tkeyOf(code);LS.set('pkey',k);LS.set('pkeyT',1);const p=await loadProfile(k,true);if(p&&(!window.__entered||confirm('저장해 둔 선생님 캐릭터를 불러올까요?')))applyProfile(p);else saveProfile(true);}}else if(Date.now()-t0>8000)clearInterval(iv);},200);},true);
 /* 설정 ‘닉네임·캐릭터’: 내 코드 정하기·바꾸기 */
 window.__setMyPw=async function(){const code=(prompt('다른 기기에서 내 캐릭터를 불러올 코드를 정해요 (4자 이상)')||'').trim();if(!code)return;if(code.length<4){toast('4자 이상으로 정해 주세요');return;}
   if(!DB||MYID==='me'){toast('학당이 연결된 뒤 다시 해 주세요');return;}
