@@ -29,13 +29,42 @@ function classStats(){const now=new Date(),tk=dkey(now),mp=tk.slice(0,8);const w
   rows.sort((a,b)=>a.nick.localeCompare(b.nick,'ko'));return rows;}
 const fmtMin=m=>m>=60?`${Math.floor(m/60)}시간 ${m%60}분`:`${m}분`;
 let tSort='name';
+/* ---------- 선생님 화면: 닉네임별로 묶어 한 줄씩 · 검색 · 골라 보기 · 숨기기 ---------- */
+let tFilter='all',tQuery='',tOpen='';
+function teacherGroups(){const rows=classStats().filter(r=>!r.me);const G={};
+  rows.forEach(r=>{const k=(r.nick||'').trim().toLowerCase()||r.id;(G[k]=G[k]||[]).push(r);});
+  const now=new Date(),tk=dkey(now);
+  return Object.values(G).map(L=>{L.sort((a,b)=>b.last-a.last);const ids=L.map(r=>r.id);const S=new Set(ids);
+    const days={};ids.forEach(id=>{const d=(STAMPS[id]&&STAMPS[id].days)||{};Object.keys(d).forEach(k=>{if(!days[k])days[k]=d[k];});});
+    const W=[];ids.forEach(id=>warnsOf(id).forEach(w=>{if(!W.some(x=>x.id===w.id))W.push(w);}));
+    const per={};(DATA.logs||[]).filter(l=>S.has(l.by)).forEach(l=>{const k=dkey(new Date(l.ts||0));per[k]=(per[k]||0)+(+l.sec||0);});
+    const st=Math.max(0,Object.keys(days).length-W.length),sd=Object.values(per).filter(v=>v>=3600).length;
+    const sum=f=>L.reduce((a,r)=>a+f(r),0);
+    return {key:(L[0].nick||'').trim(),nick:L[0].nick,ids,n:L.length,today:!!days[tk],memo:(days[tk]&&days[tk].m)||'',
+      mDays:Object.keys(days).filter(k=>k.startsWith(tk.slice(0,8))).length,wMin:sum(r=>r.wMin),aMin:sum(r=>r.aMin),books:sum(r=>r.books),last:Math.max(0,...L.map(r=>r.last)),
+      W,snack:{ok:st>=3&&sd>=3,st,sd,given:ids.some(id=>SNACKV[id])}};});}
 function renderTeacher(keepForm){const el=$('#tBody');if(!el)return;if(!ADMIN_ON){el.innerHTML='<div class="empty">선생님 암호로 들어오면 볼 수 있어요.</div>';return;}
-  let R=classStats().filter(r=>!r.me);if(tSort==='att')R.sort((a,b)=>b.mDays-a.mDays);else if(tSort==='study')R.sort((a,b)=>b.wMin-a.wMin);
-  const todayN=R.filter(r=>r.today).length,wSum=R.reduce((a,r)=>a+r.wMin,0);
-  $('#tSum').innerHTML=`<div><small>간식 대상</small><b>${R.filter(r=>snackOK(r.id).ok&&!SNACKV[r.id]).length}</b>명</div><div><small>학생</small><b>${R.length}</b>명</div><div><small>오늘 출석</small><b>${todayN}</b>명</div><div><small>이번 주 공부</small><b>${Math.round(wSum/60)}</b>시간</div>`;
-  el.innerHTML=R.length?R.map(r=>`<div class="tRow"><div class="tName"><b>${esc(r.nick)}</b><span class="${r.today?'ok':'no'}">${r.today?'오늘 출석':'미출석'}</span>${(()=>{const k=snackOK(r.id);return k.ok?`<button class="tSnack ${k.given?'done':''}" data-tsnack="${r.id}">${k.given?'🍪 간식 줬어요 ✓':'🍪 간식 대상 · 줬으면 눌러요'}</button>`:`<small class="tSm">🍪 도장 ${Math.min(3,k.st)}/3 · 1시간 공부 ${Math.min(3,k.sd)}/3일</small>`;})()}<button class="tRs" data-treset="${r.id}" title="이 학생 초기화">🧹</button></div>${(()=>{const W=warnsOf(r.id);if(!W.length)return '';const pn=W.filter(w=>w.kind==='패드립').length;return `<div class="tWarn">⚠️ 고운 말 경고 <b>${W.length}</b>회${pn?` (패드립 ${pn})`:''} · 간식 도장 −${W.length} · 엽전 −${W.length*5}<details><summary>내용 보기</summary>${W.slice(0,10).map(w=>`<div>${esc(new Date(w.ts||0).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}))} · ${esc(w.kind||'')} · “${esc(w.t||'')}”</div>`).join('')}</details><button data-tforgive="${r.id}">🧽 경고 지우기</button></div>`;})()}${r.memo?`<div class="tMemo">“${esc(r.memo)}”</div>`:''}
-    <div class="tNums"><span>출석 <b>${r.mDays}</b>일<small>이번 달</small></span><span><b>${fmtMin(r.wMin)}</b><small>이번 주 공부</small></span><span><b>${fmtMin(r.aMin)}</b><small>누적 공부</small></span><span><b>${r.books}</b>편<small>독후감</small></span></div>
-    <div class="tLast">${r.last?'마지막 활동 '+ago(r.last):'아직 활동 없음'}</div></div>`).join(''):'<div class="empty">아직 들어온 학생이 없어요. 학생들에게 링크와 암호를 알려 주세요.</div>';
+  const hid=LS.get('tHidden',{});let all=teacherGroups();const vis=all.filter(g=>!hid[g.key]);
+  const DAY=86400000,now=Date.now();
+  const F={all:['전체',g=>!hid[g.key]],today:['오늘 출석',g=>!hid[g.key]&&g.today],absent:['미출석',g=>!hid[g.key]&&!g.today],snack:['간식 대상',g=>!hid[g.key]&&g.snack.ok&&!g.snack.given],warn:['경고',g=>!hid[g.key]&&g.W.length],away:['7일+ 안 옴',g=>!hid[g.key]&&now-g.last>7*DAY],hidden:['숨김',g=>!!hid[g.key]]};
+  let R=all.filter(F[tFilter][1]);if(tQuery)R=R.filter(g=>g.nick.toLowerCase().includes(tQuery));
+  if(tSort==='att')R.sort((a,b)=>b.mDays-a.mDays||a.nick.localeCompare(b.nick,'ko'));else if(tSort==='study')R.sort((a,b)=>b.wMin-a.wMin||a.nick.localeCompare(b.nick,'ko'));else R.sort((a,b)=>a.nick.localeCompare(b.nick,'ko'));
+  const cnt=k=>all.filter(F[k][1]).length;
+  $('#tSum').innerHTML=`<div><small>학생</small><b>${vis.length}</b>명</div><div><small>오늘 출석</small><b>${vis.filter(g=>g.today).length}</b>명</div><div><small>간식 대상</small><b>${cnt('snack')}</b>명</div><div><small>이번 주 공부</small><b>${Math.round(vis.reduce((a,g)=>a+g.wMin,0)/60)}</b>시간</div>`;
+  let tools=$('#tTools');if(!tools){tools=document.createElement('div');tools.id='tTools';el.parentNode.insertBefore(tools,el);
+    tools.innerHTML=`<input id="tSearch" placeholder="🔍 이름 찾기" autocomplete="off"><div id="tFilt"></div>`;
+    tools.querySelector('#tSearch').addEventListener('input',e=>{tQuery=e.target.value.trim().toLowerCase();renderTeacher(true);});
+    tools.addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b){tFilter=b.dataset.f;renderTeacher(true);}});}
+  $('#tFilt').innerHTML=Object.entries(F).map(([k,[n]])=>`<button data-f="${k}" class="${tFilter===k?'on':''}">${n} <em>${cnt(k)}</em></button>`).join('');
+  const ago2=t=>{if(!t)return '없음';const d=Math.floor((now-t)/DAY);return d<1?'오늘':d<2?'어제':d+'일 전';};
+  el.innerHTML=R.length?`<div class="tTable"><div class="tH"><span>이름</span><span>오늘</span><span>이번 달</span><span>이번 주</span><span>간식</span></div>`+R.map(g=>{const op=tOpen===g.key,ids=g.ids.join(','),s=g.snack;
+    return `<div class="tR${op?' open':''}${g.W.length?' warn':''}" data-open-g="${esc(g.key)}"><span class="tN"><b>${esc(g.nick)}</b>${g.W.length?`<i title="고운 말 경고">⚠️${g.W.length}</i>`:''}<small>${ago2(g.last)}</small></span><span>${g.today?'<em class="ok">✓</em>':'<em class="no">–</em>'}</span><span>${g.mDays}일</span><span>${fmtMin(g.wMin)}</span><span>${s.given?'<em class="ok">🍪✓</em>':s.ok?'<em class="snk">🍪 대상</em>':`<small>${Math.min(3,s.st)}/3·${Math.min(3,s.sd)}/3</small>`}</span></div>
+    ${op?`<div class="tD">${g.memo?`<div class="tMemo">오늘 한마디 “${esc(g.memo)}”</div>`:''}
+      <div class="tNums"><span><b>${fmtMin(g.aMin)}</b><small>누적 공부</small></span><span><b>${g.books}</b>편<small>독후감</small></span><span><b>${Math.min(3,s.st)}/3 · ${Math.min(3,s.sd)}/3</b><small>간식 (도장·1시간 공부한 날)</small></span></div>
+      ${g.W.length?`<div class="tWarn">⚠️ 고운 말 경고 <b>${g.W.length}</b>회 · 간식 도장 −${g.W.length}<details><summary>내용 보기</summary>${g.W.slice(0,10).map(w=>`<div>${esc(new Date(w.ts||0).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}))} · ${esc(w.kind||'')} · “${esc(w.t||'')}”</div>`).join('')}</details></div>`:''}
+      <div class="tAct">${s.ok||s.given?`<button data-tsnack="${ids}" class="${s.given?'done':'hot'}">${s.given?'🍪 간식 줬어요 ✓ (취소)':'🍪 간식 줬어요'}</button>`:''}${g.W.length?`<button data-tforgive="${ids}">🧽 경고 지우기</button>`:''}<button data-thide="${esc(g.key)}">${hid[g.key]?'👀 다시 보이기':'🙈 명단에서 숨기기'}</button><button data-treset="${ids}" class="danger">🧹 기록 지우기</button></div>
+      ${g.n>1?`<div class="tSmall">여러 기기에서 들어온 기록 ${g.n}개를 한 명으로 합쳐 보여 줘요.</div>`:''}</div>`:''}`;}).join('')+'</div>'
+    :`<div class="empty">${tFilter==='all'&&!tQuery?'아직 들어온 학생이 없어요.':'해당하는 학생이 없어요.'}</div>`;
   if(!keepForm||!$('#tForm').dataset.ready)fillTeacherForm();}
 function fillTeacherForm(){const f=$('#tForm');f.dataset.ready='1';
   const BD=[['basics','강의실 1 칠판',['第一講 · 마법학 기초','기(氣)의 흐름과 주문의 첫걸음','“서두르지 말고, 멈추지 말라.”']],['potion','강의실 2 칠판',['靈藥 · 마법약 수업','오늘의 조제 — 집중의 물약','솥 앞 의자에 앉아 타이머를 시작하세요']],['herbs','강의실 3 칠판',['藥草園 · 약초학','오늘의 약초 — 월광초 기르기']]];
@@ -84,8 +113,13 @@ async function resetStudents(ids,all){if(!DB||MODE!=='shared'){toast('학당이 
   toast(fail?`일부를 지우지 못했어요 (${fail}건)<small>Firebase 규칙을 새로 붙여 넣었는지 확인해 주세요</small>`:`🧹 ${ids.length}명을 초기화했어요<small>학생 화면은 처음 화면으로 돌아가요</small>`);renderTeacher(true);}
 (function(){const bar=document.getElementById('tCsv');if(!bar)return;const b=document.createElement('button');b.className='ghost';b.id='tResetAll';b.textContent='🧹 전체 초기화';bar.after(b);
   b.addEventListener('click',()=>{if(!ADMIN_ON)return;const ids=classStats().filter(r=>!r.me).map(r=>r.id);if(!ids.length){toast('초기화할 학생이 없어요');return;}const v=prompt(`학생 ${ids.length}명의 출석·공부 기록·독후감·문장·캐릭터를 모두 지워요.\n되돌릴 수 없어요. 계속하려면 "초기화"라고 적어 주세요.`);if(v&&v.trim()==='초기화')resetStudents(ids,true);});
-  document.getElementById('tBody').addEventListener('click',async e=>{const r=e.target.closest('[data-treset]');if(r){const id=r.dataset.treset;if(confirm(`${nameOf(id)} 학생의 기록을 모두 지우고 처음부터 시작하게 할까요?`))resetStudents([id],false);return;}
-    const fg=e.target.closest('[data-tforgive]');if(fg){if(!confirm('이 학생의 고운 말 경고를 모두 지울까요?'))return;const W=warnsOf(fg.dataset.tforgive);try{await Promise.all(W.map(w=>DB.collection('warns').doc(w.id).delete()));toast('경고를 지웠어요');}catch(err){toast('지우지 못했어요<small>Firebase 규칙을 새로 붙여 넣었는지 확인해 주세요</small>');}return;}const g=e.target.closest('[data-tsnack]');if(g){const id=g.dataset.tsnack;try{await DB.doc('settings/snack').set({[id]:SNACKV[id]?null:Date.now()});}catch(err){toast('저장하지 못했어요');}}});})();
+  document.getElementById('tBody').addEventListener('click',async e=>{
+    const ids=k=>String(k||'').split(',').filter(Boolean);
+    const r=e.target.closest('[data-treset]');if(r){const L=ids(r.dataset.treset);if(confirm(`${nameOf(L[0])} 학생의 기록(출석·공부·독후감 등)을 모두 지우고 처음부터 시작하게 할까요?`))resetStudents(L,false);return;}
+    const fg=e.target.closest('[data-tforgive]');if(fg){if(!confirm('이 학생의 고운 말 경고를 모두 지울까요?'))return;const W=[];ids(fg.dataset.tforgive).forEach(id=>warnsOf(id).forEach(w=>{if(!W.some(x=>x.id===w.id))W.push(w);}));try{await Promise.all(W.map(w=>DB.collection('warns').doc(w.id).delete()));toast('경고를 지웠어요');}catch(err){toast('지우지 못했어요');}return;}
+    const g=e.target.closest('[data-tsnack]');if(g){const L=ids(g.dataset.tsnack);const on=!L.some(id=>SNACKV[id]);const o={};L.forEach(id=>o[id]=on?Date.now():null);try{await DB.doc('settings/snack').set(o);toast(on?'🍪 간식 준 것으로 표시했어요':'간식 표시를 취소했어요');}catch(err){toast('저장하지 못했어요');}return;}
+    const h=e.target.closest('[data-thide]');if(h){const H=LS.get('tHidden',{});const k=h.dataset.thide;if(H[k])delete H[k];else H[k]=Date.now();LS.set('tHidden',H);toast(H[k]?'명단에서 숨겼어요<small>‘숨김’ 칸에서 다시 볼 수 있어요</small>':'다시 보이게 했어요');tOpen='';renderTeacher(true);return;}
+    const row=e.target.closest('[data-open-g]');if(row){tOpen=tOpen===row.dataset.openG?'':row.dataset.openG;renderTeacher(true);}});})();
 
 /* ---------- 💬 상담 신청 (교무실 프로그램 Apps Script와 직접 연결) ---------- */
 function rsvClean(u){u=String(u||'').trim();return /^https:\/\/script\.google(usercontent)?\.com\/[^\s"'<>]+$/.test(u)?u.slice(0,600):'';}
