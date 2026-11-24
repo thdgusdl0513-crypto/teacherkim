@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded',()=>{});
     const rooms={};$$('#tRooms [data-room]').forEach(i=>{const v=i.value.trim().slice(0,14);if(v)rooms[i.dataset.room]=v;});
     const boards={};$$('#tBoards [data-bd]').forEach(i=>{const v=i.value.trim().slice(0,40);if(v){(boards[i.dataset.bd]=boards[i.dataset.bd]||{})[i.dataset.bi]=v;}});
     const v={boards,rooms,chat:$('#tChat').value,ch:[+$('#tCh0').value,+$('#tCh1').value],lock:$('#tLock').value,lk:[+$('#tLk0').value,+$('#tLk1').value],rsv:rsvClean($('#tRsv').value),ts:Date.now()};if($('#tRsv').value.trim()&&!v.rsv){toast('웹 앱 주소를 확인해 주세요<small>https://script.google.com/macros/s/…/exec 모양이에요</small>');return;}
-    try{await DB.doc('settings/class').set(v);toast('학급 설정을 저장했어요<small>학생들 화면에도 바로 바뀌어요</small>');}catch(e){toast('저장하지 못했어요<small>선생님 암호로 들어왔는지 확인해 주세요</small>');}});})();
+    try{await DB.doc('settings/class').set(v);toast('학급 설정을 저장했어요<small>학생들 화면에도 바로 바뀌어요</small>');if(v.rsv)setTimeout(()=>rsvCheckNow(v.rsv),700);}catch(e){toast('저장하지 못했어요<small>선생님 암호로 들어왔는지 확인해 주세요</small>');}});})();
 
 /* ---------- 간식 미션 · 학생 초기화 ---------- */
 let RESETV={},SNACKV={};let rsSub=false;
@@ -125,24 +125,39 @@ async function resetStudents(ids,all){if(!DB||MODE!=='shared'){toast('학당이 
 function rsvClean(u){u=String(u||'').trim();return /^https:\/\/script\.google(usercontent)?\.com\/[^\s"'<>]+$/.test(u)?u.slice(0,600):'';}
 const rsvApi=()=>rsvClean(CLS.rsv);
 async function rsvCall(payload){const u=rsvApi();if(!u)throw new Error('상담 신청이 아직 연결되지 않았어요');
-  const r=payload?await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}):await fetch(u+(u.includes('?')?'&':'?')+'t='+Date.now());
-  const tx=await r.text();let j;try{j=JSON.parse(tx);}catch(e){throw new Error('상담 신청 서버에 연결하지 못했어요');}if(!j.ok)throw new Error(j.error||'요청 실패');return j;}
+  let r;try{r=payload?await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}):await fetch(u+(u.includes('?')?'&':'?')+'t='+Date.now());}catch(e){const er=new Error('상담 신청 서버에 닿지 못했어요');er.kind='net';throw er;}
+  const tx=await r.text();let j;try{j=JSON.parse(tx);}catch(e){const er=new Error('상담 신청 서버에 연결하지 못했어요');er.kind=/^\s*</.test(tx)?'html':'bad';throw er;}if(!j.ok){const er=new Error(j.error||'요청 실패');er.kind='app';throw er;}return j;}
+/* 🔌 웹 앱 연결 진단 */
+async function rsvDiag(url){const u=rsvClean(url);const R={ok:false,u,n:0,title:'',hint:''};
+  if(!url||!String(url).trim()){R.title='웹 앱 주소가 저장되어 있지 않아요';R.hint='선생님 화면 → ‘💬 상담 신청 연결’에 주소를 넣고 맨 아래 ‘학급 설정 저장’을 눌러 주세요.';return R;}
+  if(!u){R.title='웹 앱 주소 모양이 달라요';R.hint='https://script.google.com/macros/s/…/exec 로 된 주소를 넣어 주세요.';return R;}
+  if(/\/dev(\?|$)/.test(u)){R.title='테스트용(/dev) 주소예요';R.hint='Apps Script → 배포 → 배포 관리에 있는 /exec 로 끝나는 주소를 넣어 주세요. /dev 주소는 선생님 본인만 열 수 있어요.';return R;}
+  let r,tx;try{r=await fetch(u+(u.includes('?')?'&':'?')+'t='+Date.now());tx=await r.text();}catch(e){R.title='웹 앱에 닿지 못했어요';R.hint='① 배포 설정의 ‘액세스 권한’이 <b>모든 사용자</b>인지 ② 코드를 고친 뒤 <b>새 버전으로 배포</b>했는지 ③ 주소를 끝까지 복사했는지 확인해 주세요.';return R;}
+  let j;try{j=JSON.parse(tx);}catch(e){if(/^\s*</.test(tx)){R.title='구글 로그인·권한 화면이 돌아와요';R.hint='배포할 때 ‘다음 사용자 인증 정보로 실행: <b>나</b>’, ‘액세스 권한: <b>모든 사용자</b>’로 골라 새 버전으로 다시 배포해 주세요.';}else{R.title='웹 앱 응답을 읽지 못했어요';R.hint='교무실 프로그램 상담 관리자와 같은 웹 앱 주소인지 확인해 주세요.';}return R;}
+  if(!j.ok){R.title='웹 앱이 오류를 보냈어요: '+esc(String(j.error||'알 수 없음'));R.hint='Apps Script의 ‘실행’ 기록에서 오류를 확인해 주세요.';return R;}
+  if(!Array.isArray(j.slots)){R.title='상담 웹 앱이 아닌 것 같아요';R.hint='응답에 상담 시간 목록이 없어요. 교무실 프로그램 상담 관리자에 넣은 주소와 같은지 확인해 주세요.';return R;}
+  R.ok=true;R.n=j.slots.filter(x=>!x.taken).length;R.all=j.slots.length;R.title='상담 웹 앱과 연결됐어요';R.hint=R.all?`학생들이 고를 수 있는 열린 시간 <b>${R.n}</b>개${R.all>R.n?` (이미 신청된 시간 ${R.all-R.n}개)`:''}`:'연결은 됐지만 열린 상담 시간이 없어요. 교무실 프로그램에서 상담 시간을 열어 주세요.';return R;}
+function rsvAlert(R,extra){const old=document.getElementById('rsvPop');if(old)old.remove();const w=document.createElement('div');w.id='rsvPop';w.className='tnWrap';
+  w.innerHTML=`<div class="tnCard${R.ok?' ok':' bad'}"><div class="tnIco">${R.ok?'✅':'⚠️'}</div><b>${R.title}</b><p style="text-align:left">${R.hint}${extra?'<br><br>'+extra:''}</p>${R.u?`<div class="rsvU">${esc(R.u.replace(/^https:\/\//,'').slice(0,70))}${R.u.length>78?'…':''}</div>`:''}<div class="tnBtns"><button class="primary" data-rsvx>확인</button></div></div>`;
+  document.body.appendChild(w);w.addEventListener('click',e=>{if(e.target.closest('[data-rsvx]')||e.target===w)w.remove();});}
+window.rsvCheckNow=async(url,silentOk)=>{const R=await rsvDiag(url===undefined?CLS.rsv:url);if(!(silentOk&&R.ok))rsvAlert(R);else toast('✅ 상담 웹 앱 연결 확인<small>열린 시간 '+R.n+'개</small>');return R;};
 const CS={slots:[],pick:'',chips:[],mine:null,busy:false,loadedAt:0,err:''};
 const csMe=()=>LS.get('csMe',{no:'',name:'',pin:''});
 const csWhen=x=>{const d=new Date(x.date+'T00:00:00');return `${d.getMonth()+1}/${d.getDate()}(${'일월화수목금토'[d.getDay()]}) ${x.start}~${x.end}`;};
 const CS_TOP=['📚 공부','🌱 진로','🤝 친구','🏠 가족','💭 고민','🙂 그냥 이야기하고 싶어요'];
 async function csLoad(force){if(!rsvApi())return;if(!force&&Date.now()-CS.loadedAt<20000)return;CS.loadedAt=Date.now();
-  try{const j=await rsvCall();CS.slots=(j.slots||[]).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));CS.err='';}catch(e){CS.err=e.message;}
+  try{const j=await rsvCall();CS.slots=(j.slots||[]).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));CS.err='';if(CS.announce){toast('🟢 상담 서버와 연결됐어요<small>열린 시간 '+CS.slots.filter(x=>!x.taken).length+'개</small>');}}catch(e){CS.err=e.message;if(CS.announce){if(ADMIN_ON)rsvCheckNow();else toast('⚠️ 상담 서버에 연결하지 못했어요<small>선생님께 알려 주세요</small>');}}CS.announce=false;
   const m=csMe();if(m.no&&m.name&&/^\d{4}$/.test(m.pin)){try{const j=await rsvCall({action:'status',no:m.no,name:m.name,pin:m.pin});CS.mine=j.reqs||[];}catch(e){CS.mine=null;}}
   renderCounsel(true);}
 function renderCounsel(fromLoad){const el=$('#csBody');if(!el)return;const u=rsvApi();
-  if(!u){el.innerHTML=`<div class="empty" style="padding:26px 6px">🙂 선생님이 아직 상담 신청을 열지 않았어요.<br><small>급한 이야기는 교무실로 오거나 선생님께 바로 말해 주세요.</small></div>${ADMIN_ON?'<div class="empty">선생님: 선생님 화면 아래 ‘💬 상담 신청 연결’에 웹 앱 주소를 넣고 저장해 주세요.</div>':''}`;return;}
+  if(!u){el.innerHTML=`<div class="csConn bad">🔴 상담 신청이 연결되지 않았어요${ADMIN_ON?' <button data-csdiag>원인 보기</button>':''}</div><div class="empty" style="padding:26px 6px">🙂 선생님이 아직 상담 신청을 열지 않았어요.<br><small>급한 이야기는 교무실로 오거나 선생님께 바로 말해 주세요.</small></div>${ADMIN_ON?'<div class="empty">선생님: 선생님 화면 아래 ‘💬 상담 신청 연결’에 웹 앱 주소를 넣고 저장해 주세요.</div>':''}`;return;}
   if(!fromLoad){csLoad(false);}
   const keep={};['csNo','csName','csPin','csTopic','csMail'].forEach(id=>{const i=document.getElementById(id);if(i)keep[id]=i.value;});const m=csMe();
   const today=dkey(new Date());const mineAct=(CS.mine||[]).filter(r=>r.date>=today||r.status==='대기');
   const stc=s=>s==='승인'?'y':s==='대기'?'w':s==='거절'?'n':'c';const stt=s=>s==='승인'?'확정 ✓':s==='대기'?'선생님 확인 중':s;
   const days={};CS.slots.forEach(x=>(days[x.date]=days[x.date]||[]).push(x));
-  el.innerHTML=`<div class="csIntro">무슨 이야기든 괜찮아요 🌱 시간을 고르고 <b>신청</b>만 누르면 돼요.<br><small>선생님이 확인하면 여기서 ‘확정’으로 바뀌어요.</small></div>
+  const cst=CS.err?`<div class="csConn bad">🔴 상담 서버 연결 안 됨 · ${esc(CS.err)}${ADMIN_ON?' <button data-csdiag>원인 보기</button>':'<br><small>선생님께 알려 주세요</small>'}</div>`:CS.loadedAt?`<div class="csConn ok">🟢 상담 서버 연결됨 · 열린 시간 ${CS.slots.filter(x=>!x.taken).length}개${ADMIN_ON?' <button data-csdiag>다시 확인</button>':''}</div>`:'<div class="csConn">⏳ 상담 서버에 연결하는 중…</div>';
+  el.innerHTML=cst+`<div class="csIntro">무슨 이야기든 괜찮아요 🌱 시간을 고르고 <b>신청</b>만 누르면 돼요.<br><small>선생님이 확인하면 여기서 ‘확정’으로 바뀌어요.</small></div>
   ${mineAct.length?`<div class="cStep">📋 내 신청</div>${mineAct.map(r=>`<div class="cMine"><div><b>${esc(csWhen(r))}</b>${r.slot?` <small>${esc(r.slot)}</small>`:''}${r.note?`<br><small>선생님: ${esc(r.note)}</small>`:''}</div><span class="cSt ${stc(r.status)}">${esc(stt(r.status))}</span>${r.status==='대기'||r.status==='승인'?`<button data-cscancel="${esc(r.id)}">취소</button>`:''}</div>`).join('')}`:''}
   <div class="cStep">① 나는 누구?<small>처음 한 번만 쓰면 다음부터 자동으로 채워져요</small></div>
   <div class="cRow3"><input id="csNo" inputmode="numeric" maxlength="4" placeholder="학번 (예: 1701)" value="${esc(keep.csNo??m.no)}"><input id="csName" maxlength="10" placeholder="이름" value="${esc(keep.csName??m.name)}"><input id="csPin" inputmode="numeric" maxlength="4" placeholder="비번 4자리" value="${esc(keep.csPin??m.pin)}"></div>
@@ -160,9 +175,9 @@ async function csSubmit(){const v=id=>($('#'+id)||{}).value||'';const no=v('csNo
   const topic=[CS.chips.join(' '),v('csTopic').trim()].filter(Boolean).join(' · ').slice(0,200);LS.set('csMe',{no,name,pin,email});
   CS.busy=true;renderCounsel(true);try{await rsvCall({action:'reserve',slotId:CS.pick,no,name,pin,topic,email});CS.pick='';CS.chips=[];const t=$('#csTopic');if(t)t.value='';toast('💬 상담 신청 완료!<small>선생님이 확인하면 ‘확정’으로 바뀌어요</small>');try{chime();}catch(e){}CS.busy=false;await csLoad(true);}
   catch(e){CS.busy=false;renderCounsel(true);const e2=$('#csMsg');if(e2)e2.textContent=e.message;if(/이미 신청/.test(e.message))csLoad(true);}}
-(function(){const tile=$('#csTile');if(tile)tile.addEventListener('click',()=>setTimeout(()=>renderCounsel(),0));
+(function(){const md=$('#counsel');if(md){let was=false;new MutationObserver(()=>{const on=md.classList.contains('show');if(on&&!was){CS.announce=true;CS.loadedAt=0;renderCounsel();}was=on;}).observe(md,{attributes:true,attributeFilter:['class']});}
   const box=$('#csBody');if(box)box.addEventListener('click',async e=>{const s=e.target.closest('[data-csslot]');if(s){CS.pick=CS.pick===s.dataset.csslot?'':s.dataset.csslot;renderCounsel(true);return;}
-    const c=e.target.closest('[data-cschip]');if(c){const t=c.dataset.cschip;CS.chips=CS.chips.includes(t)?CS.chips.filter(x=>x!==t):CS.chips.concat(t);renderCounsel(true);return;}
+    if(e.target.closest('[data-csdiag]')){rsvCheckNow();return;}const c=e.target.closest('[data-cschip]');if(c){const t=c.dataset.cschip;CS.chips=CS.chips.includes(t)?CS.chips.filter(x=>x!==t):CS.chips.concat(t);renderCounsel(true);return;}
     if(e.target.closest('#csGo')){csSubmit();return;}
     const x=e.target.closest('[data-cscancel]');if(x){if(!confirm('이 상담 신청을 취소할까요?'))return;const m=csMe();try{await rsvCall({action:'cancel',id:x.dataset.cscancel,no:m.no,pin:m.pin});toast('신청을 취소했어요');}catch(err){toast(err.message);}csLoad(true);}});
   setInterval(()=>{const md=$('#counsel');if(md&&md.classList.contains('show')&&!CS.busy&&!document.activeElement.closest('#csBody'))csLoad(false);},30000);
@@ -174,6 +189,9 @@ async function csSubmit(){const v=id=>($('#'+id)||{}).value||'';const no=v('csNo
       if(tk){const j=await (await fetch(`${u}${u.includes('?')?'&':'?'}action=admin&token=${encodeURIComponent(tk)}&t=${Date.now()}`)).json();if(!j.ok)throw new Error(j.error||'관리 암호 확인 실패');const t=dkey(new Date());const pend=(j.reqs||[]).filter(r=>r.status==='대기'&&r.date>=t).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
         html+=pend.length?pend.map(r=>`<div class="cMine"><b>${esc(csWhen(r))}</b> · ${esc(r.name)}(${esc(r.no)})${r.topic?`<br><small>${esc(r.topic)}</small>`:''}<br><button data-tdec="${esc(r.id)}" data-st="승인" style="background:#3f7f5a;color:#fff">승인</button><button data-tdec="${esc(r.id)}" data-st="거절" style="background:#eee">거절</button></div>`).join(''):'<div class="empty">승인 대기 중인 신청이 없어요.</div>';}
       out.innerHTML=html;}catch(e){out.innerHTML=`<div class="empty">⚠️ 연결하지 못했어요: ${esc(e.message||'주소와 배포 설정(액세스: 모든 사용자)을 확인해 주세요')}</div>`;}}
-  const chk=$('#tRsvChk');if(chk)chk.addEventListener('click',tLoad);
+  const chk=$('#tRsvChk');if(chk)chk.addEventListener('click',()=>{tLoad();rsvCheckNow(rsvClean($('#tRsv').value)?$('#tRsv').value:CLS.rsv);});
   const tb=$('#tRsvBox');if(tb)tb.addEventListener('click',async e=>{const b=e.target.closest('[data-tdec]');if(!b)return;const st=b.dataset.st;const note=st==='거절'?(prompt('학생에게 보여 줄 메모 (선택)','')||''):'';const u=rsvClean($('#tRsv').value)||rsvApi();
     try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:LS.get('rsvTok',''),action:'decide',id:b.dataset.tdec,status:st,note})});const j=await r.json();if(!j.ok)throw new Error(j.error||'실패');toast(`${st}했어요${j.mailed==='ok'?'<small>학생에게 안내 메일을 보냈어요</small>':''}`);}catch(err){toast('처리하지 못했어요<small>'+esc(err.message)+'</small>');}tLoad();});})();
+
+/* 선생님: 입장하면 상담 웹 앱 연결을 한 번 확인해서 알려 줌 */
+(function(){let done=false;const t0=Date.now();const iv=setInterval(()=>{if(done)return clearInterval(iv);if(!window.__entered||document.getElementById('intro'))return;if(typeof ADMIN_ON==='undefined'||!ADMIN_ON){if(Date.now()-t0>60000){done=true;}return;}if(!clsSub||Date.now()-t0<6000)return;done=true;setTimeout(()=>{if(document.getElementById('tnPop'))return;rsvCheckNow(undefined,true);},1500);},1000);})();
