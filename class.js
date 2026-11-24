@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded',()=>{});
 (function bindTeacher(){const T=$('#teacher');if(!T)return;
   $('#tSortBar').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!b)return;tSort=b.dataset.s;$$('#tSortBar button').forEach(x=>x.classList.toggle('on',x===b));renderTeacher(true);});
   $('#tCsv').addEventListener('click',csvExport);$('#tChat').addEventListener('change',tVis);$('#tLock').addEventListener('change',tVis);
-  $('#tSave').addEventListener('click',async()=>{if(!DB||MODE!=='shared'){toast('학당이 연결돼 있어야 저장할 수 있어요');return;}
+  $('#tSave').addEventListener('click',async()=>{if(!DB||MODE!=='shared'){toast('학당이 연결돼 있어야 저장할 수 있어요');return;}if(!(await ensureAdmin('저장')))return;
     const rooms={};$$('#tRooms [data-room]').forEach(i=>{const v=i.value.trim().slice(0,14);if(v)rooms[i.dataset.room]=v;});
     const boards={};$$('#tBoards [data-bd]').forEach(i=>{const v=i.value.trim().slice(0,40);if(v){(boards[i.dataset.bd]=boards[i.dataset.bd]||{})[i.dataset.bi]=v;}});
     const v={boards,rooms,chat:$('#tChat').value,ch:[+$('#tCh0').value,+$('#tCh1').value],lock:$('#tLock').value,lk:[+$('#tLk0').value,+$('#tLk1').value],rsv:rsvClean($('#tRsv').value),ts:Date.now()};if($('#tRsv').value.trim()&&!v.rsv){toast('웹 앱 주소를 확인해 주세요<small>https://script.google.com/macros/s/…/exec 모양이에요</small>');return;}
@@ -106,7 +106,7 @@ function checkReset(){const t=Math.max(+RESETV.all||0,+RESETV['u_'+MYID]||0);if(
 setInterval(()=>{if(!rsSub&&typeof DB!=='undefined'&&DB&&MODE==='shared'){rsSub=true;
   DB.doc('settings/reset').onSnapshot(d=>{RESETV=(d&&d.exists&&d.data())||{};checkReset();},()=>{});
   DB.doc('settings/snack').onSnapshot(d=>{SNACKV=(d&&d.exists&&d.data())||{};try{renderSnack();renderTeacher(true);}catch(e){}},()=>{});}},1500);
-async function resetStudents(ids,all){if(!DB||MODE!=='shared'){toast('학당이 연결돼 있어야 초기화할 수 있어요');return;}const S=new Set(ids);let n=0;const FAIL=[];
+async function resetStudents(ids,all){if(!DB||MODE!=='shared'){toast('학당이 연결돼 있어야 초기화할 수 있어요');return;}if(!(await ensureAdmin('초기화')))return;const S=new Set(ids);let n=0;const FAIL=[];
   const del=async(path,label)=>{try{await DB.doc(path).delete();n++;}catch(e){FAIL.push(label+' ('+(e&&(e.code||e.message)||'오류')+')');}};
   toast('🧹 초기화하는 중…<small>잠시만 기다려 주세요</small>');
   for(const col of ['logs','books','quotes','board','playlist','gallery']){for(const d of (DATA[col]||[]).filter(x=>S.has(x.by))){await del(col+'/'+d.id,'기록 '+col);}}
@@ -201,7 +201,7 @@ async function csSubmit(){const v=id=>($('#'+id)||{}).value||'';const no=v('csNo
     try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:LS.get('rsvTok',''),action:'decide',id:b.dataset.tdec,status:st,note})});const j=await r.json();if(!j.ok)throw new Error(j.error||'실패');toast(`${st}했어요${j.mailed==='ok'?'<small>학생에게 안내 메일을 보냈어요</small>':''}`);}catch(err){toast('처리하지 못했어요<small>'+esc(err.message)+'</small>');}tLoad();});})();
 
 /* 선생님: 입장하면 상담 웹 앱 연결을 한 번 확인해서 알려 줌 */
-(function(){let done=false;const t0=Date.now();const iv=setInterval(()=>{if(done)return clearInterval(iv);if(!window.__entered||document.getElementById('intro'))return;if(typeof ADMIN_ON==='undefined'||!ADMIN_ON){if(Date.now()-t0>60000){done=true;}return;}if(!clsSub||Date.now()-t0<6000)return;done=true;setTimeout(()=>{if(document.getElementById('tnPop'))return;rsvCheckNow(undefined,true);},1500);},1000);})();
+(function(){let done=false;const t0=Date.now();const iv=setInterval(()=>{if(done)return clearInterval(iv);if(!window.__entered||document.getElementById('intro'))return;if(typeof ADMIN_ON==='undefined'||!ADMIN_ON){if(Date.now()-t0>60000){done=true;}return;}if(!clsSub||Date.now()-t0<6000)return;done=true;setTimeout(async()=>{if(document.getElementById('tnPop')||document.getElementById('admPop')||!rsvApi())return;if((await adminOk())===false)return;rsvCheckNow(undefined,true);},2500);},1000);})();
 
 /* 선생님 화면: 웹 앱 주소 칸 바로 아래에 연결 상태 표시 */
 (function(){const inp=$('#tRsv'),st=$('#tRsvStat');if(!inp||!st)return;let seq=0,tm=0;
@@ -216,3 +216,21 @@ async function csSubmit(){const v=id=>($('#'+id)||{}).value||'';const no=v('csNo
   const md=$('#teacher');if(md){let was=false;new MutationObserver(()=>{const on=md.classList.contains('show');if(on&&!was)setTimeout(()=>stat(false),300);was=on;}).observe(md,{attributes:true,attributeFilter:['class']});}
   const chk=$('#tRsvChk');if(chk){const nb=chk.cloneNode(true);chk.replaceWith(nb);nb.addEventListener('click',()=>{stat(true);try{tLoadPub&&tLoadPub();}catch(e){}});}
 })();
+
+/* 🔑 선생님 인증 확인: 이 기기는 선생님 모드인데 Firebase에서 선생님으로 인정되지 않을 때 코드를 다시 받기 */
+async function adminOk(){try{if(!window.__cloudAdmin||!window.__cloudAdmin.verify||!DB||MYID==='me')return null;return await window.__cloudAdmin.verify();}catch(e){return null;}}
+function ensureAdmin(what){return new Promise(async done=>{const ok=await adminOk();if(ok!==false){done(true);return;}
+  const old=document.getElementById('admPop');if(old)old.remove();const w=document.createElement('div');w.id='admPop';w.className='tnWrap';
+  w.innerHTML=`<div class="tnCard bad"><div class="tnIco">🔑</div><b>선생님 확인이 풀려 있어요</b><p style="text-align:left">이 기기는 선생님 모드로 보이지만, 서버(Firebase)에서는 선생님으로 확인되지 않았어요. 그래서 ${esc(what||'관리')}이(가) 모두 막혀요.<br><small>브라우저·앱을 바꾸거나 기록을 지우면 이렇게 될 수 있어요.</small></p><input id="admIn" type="password" placeholder="선생님 코드" autocomplete="off" style="width:100%;box-sizing:border-box;margin:0 0 6px;padding:11px 12px;border-radius:12px;border:1px solid #d9c3a3;font:inherit"><div id="admMsg" style="font-size:13px;color:#9a3a20;min-height:18px;margin-bottom:8px"></div><div class="tnBtns"><button class="ghost" data-admx>취소</button><button class="primary" data-admgo>다시 확인하기</button></div></div>`;
+  document.body.appendChild(w);const inp=w.querySelector('#admIn');setTimeout(()=>inp.focus(),50);
+  const go=async()=>{const v=inp.value.trim();if(!v){inp.focus();return;}const m=w.querySelector('#admMsg');m.textContent='확인하는 중…';
+    try{await DB.doc('members/'+MYID).set({admin:v});}catch(e){m.textContent='저장하지 못했어요. 연결을 확인해 주세요.';return;}
+    await new Promise(r=>setTimeout(r,500));const ok=await adminOk();
+    if(ok===false){try{await DB.doc('members/'+MYID).set({admin:''});}catch(e){}m.textContent=window.__rulesOld?'Firebase 규칙이 예전 것이에요. 규칙을 다시 게시해 주세요.':'코드가 맞지 않아요.';inp.select();return;}
+    w.remove();toast('🔑 선생님 확인 완료<small>이제 '+esc(what||'관리')+'할 수 있어요</small>');done(true);};
+  w.addEventListener('click',e=>{if(e.target.closest('[data-admgo]'))go();else if(e.target.closest('[data-admx]')){w.remove();done(false);}});
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')go();});});}
+window.ensureAdmin=ensureAdmin;
+/* 선생님 모드로 들어오면 서버 인증부터 확인 */
+(function(){let done=false;const t0=Date.now();const iv=setInterval(async()=>{if(done)return clearInterval(iv);if(!window.__entered||document.getElementById('intro'))return;if(Date.now()-t0>90000){done=true;return;}
+  if(typeof ADMIN_ON==='undefined'||!ADMIN_ON||!DB||MODE!=='shared'||!window.__cloudAdmin)return;if(Date.now()-t0<5000)return;done=true;const ok=await adminOk();if(ok===false)ensureAdmin('선생님 관리');},1000);})();
