@@ -42,11 +42,11 @@ function teacherGroups(){const rows=classStats().filter(r=>!r.me);const G={};
     const sum=f=>L.reduce((a,r)=>a+f(r),0);
     return {key:(L[0].nick||'').trim(),nick:L[0].nick,ids,n:L.length,today:!!days[tk],memo:(days[tk]&&days[tk].m)||'',
       mDays:Object.keys(days).filter(k=>k.startsWith(tk.slice(0,8))).length,wMin:sum(r=>r.wMin),aMin:sum(r=>r.aMin),books:sum(r=>r.books),last:Math.max(0,...L.map(r=>r.last)),
-      W,snack:{ok:st>=3&&sd>=3,st,sd,given:ids.some(id=>SNACKV[id])}};});}
+      W,snack:snackCalc(per,W,snackGiven(ids))};});}
 function renderTeacher(keepForm){const el=$('#tBody');if(!el)return;if(!ADMIN_ON){el.innerHTML='<div class="empty">선생님 암호로 들어오면 볼 수 있어요.</div>';return;}
   const hid=LS.get('tHidden',{});let all=teacherGroups();const vis=all.filter(g=>!hid[g.key]);
   const DAY=86400000,now=Date.now();
-  const F={all:['전체',g=>!hid[g.key]],today:['오늘 출석',g=>!hid[g.key]&&g.today],absent:['미출석',g=>!hid[g.key]&&!g.today],snack:['간식 대상',g=>!hid[g.key]&&g.snack.ok&&!g.snack.given],warn:['경고',g=>!hid[g.key]&&g.W.length],away:['7일+ 안 옴',g=>!hid[g.key]&&now-g.last>7*DAY],hidden:['숨김',g=>!!hid[g.key]]};
+  const F={all:['전체',g=>!hid[g.key]],today:['오늘 출석',g=>!hid[g.key]&&g.today],absent:['미출석',g=>!hid[g.key]&&!g.today],snack:['간식 대상',g=>!hid[g.key]&&g.snack.ok],warn:['경고',g=>!hid[g.key]&&g.W.length],away:['7일+ 안 옴',g=>!hid[g.key]&&now-g.last>7*DAY],hidden:['숨김',g=>!!hid[g.key]]};
   let R=all.filter(F[tFilter][1]);if(tQuery)R=R.filter(g=>g.nick.toLowerCase().includes(tQuery));
   if(tSort==='att')R.sort((a,b)=>b.mDays-a.mDays||a.nick.localeCompare(b.nick,'ko'));else if(tSort==='study')R.sort((a,b)=>b.wMin-a.wMin||a.nick.localeCompare(b.nick,'ko'));else R.sort((a,b)=>a.nick.localeCompare(b.nick,'ko'));
   const cnt=k=>all.filter(F[k][1]).length;
@@ -58,11 +58,11 @@ function renderTeacher(keepForm){const el=$('#tBody');if(!el)return;if(!ADMIN_ON
   $('#tFilt').innerHTML=Object.entries(F).map(([k,[n]])=>`<button data-f="${k}" class="${tFilter===k?'on':''}">${n} <em>${cnt(k)}</em></button>`).join('');
   const ago2=t=>{if(!t)return '없음';const d=Math.floor((now-t)/DAY);return d<1?'오늘':d<2?'어제':d+'일 전';};
   el.innerHTML=R.length?`<div class="tTable"><div class="tH"><span>이름</span><span>오늘</span><span>이번 달</span><span>이번 주</span><span>간식</span></div>`+R.map(g=>{const op=tOpen===g.key,ids=g.ids.join(','),s=g.snack;
-    return `<div class="tR${op?' open':''}${g.W.length?' warn':''}" data-open-g="${esc(g.key)}"><span class="tN"><b>${esc(g.nick)}</b>${g.W.length?`<i title="고운 말 경고">⚠️${g.W.length}</i>`:''}<small>${ago2(g.last)}</small></span><span>${g.today?'<em class="ok">✓</em>':'<em class="no">–</em>'}</span><span>${g.mDays}일</span><span>${fmtMin(g.wMin)}</span><span>${s.given?'<em class="ok">🍪✓</em>':s.ok?'<em class="snk">🍪 대상</em>':`<small>${Math.min(3,s.st)}/3·${Math.min(3,s.sd)}/3</small>`}</span></div>
+    return `<div class="tR${op?' open':''}${g.W.length?' warn':''}" data-open-g="${esc(g.key)}"><span class="tN"><b>${esc(g.nick)}</b>${g.W.length?`<i title="고운 말 경고">⚠️${g.W.length}</i>`:''}<small>${ago2(g.last)}</small></span><span>${g.today?'<em class="ok">✓</em>':'<em class="no">–</em>'}</span><span>${g.mDays}일</span><span>${fmtMin(g.wMin)}</span><span>${s.ok?`<em class="snk">🍪 ${s.avail}개</em>`:s.all?'<em class="ok">🏆</em>':`<small>${s.prog?`${s.prog.i+1}단계 ${s.prog.streak}/${s.prog.need}`:''}</small>`}</span></div>
     ${op?`<div class="tD">${g.memo?`<div class="tMemo">오늘 한마디 “${esc(g.memo)}”</div>`:''}
-      <div class="tNums"><span><b>${fmtMin(g.aMin)}</b><small>누적 공부</small></span><span><b>${g.books}</b>편<small>독후감</small></span><span><b>${Math.min(3,s.st)}/3 · ${Math.min(3,s.sd)}/3</b><small>간식 (도장·1시간 공부한 날)</small></span></div>
-      ${g.W.length?`<div class="tWarn">⚠️ 고운 말 경고 <b>${g.W.length}</b>회 · 간식 도장 −${g.W.length}<details><summary>내용 보기</summary>${g.W.slice(0,10).map(w=>`<div>${esc(new Date(w.ts||0).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}))} · ${esc(w.kind||'')} · “${esc(w.t||'')}”</div>`).join('')}</details></div>`:''}
-      <div class="tAct">${s.ok||s.given?`<button data-tsnack="${ids}" class="${s.given?'done':'hot'}">${s.given?'🍪 간식 줬어요 ✓ (취소)':'🍪 간식 줬어요'}</button>`:''}${g.W.length?`<button data-tforgive="${ids}">🧽 경고 지우기</button>`:''}<button data-thide="${esc(g.key)}">${hid[g.key]?'👀 다시 보이기':'🙈 명단에서 숨기기'}</button><button data-treset="${ids}" class="danger">🧹 기록 지우기</button></div>
+      <div class="tNums"><span><b>${fmtMin(g.aMin)}</b><small>누적 공부</small></span><span><b>${g.books}</b>편<small>독후감</small></span><span><b>${s.stages}/5단계</b><small>간식 · 준 것 ${s.givenN} · 남은 것 ${s.avail}${s.lost?` · 경고로 −${s.lost}`:''}</small></span></div><div class="tSmall">${s.all?'🏆 5단계를 모두 끝냈어요':s.prog?`지금 ${s.prog.i+1}단계: ${snackTxt(s.prog.i)} — 연속 ${s.prog.streak}/${s.prog.need}일 · 오늘 ${s.prog.today}분`:''}</div>
+      ${g.W.length?`<div class="tWarn">⚠️ 고운 말 경고 <b>${g.W.length}</b>회 · 간식 −${g.W.length}단계<details><summary>내용 보기</summary>${g.W.slice(0,10).map(w=>`<div>${esc(new Date(w.ts||0).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}))} · ${esc(w.kind||'')} · “${esc(w.t||'')}”</div>`).join('')}</details></div>`:''}
+      <div class="tAct">${s.ok?`<button data-tsnack="${ids}" data-n="${s.givenN+1}" class="hot">🍪 간식 1개 줬어요 (남은 ${s.avail})</button>`:''}${s.givenN?`<button data-tsnack="${ids}" data-n="${s.givenN-1}" class="done">↩ 준 간식 1개 취소 (${s.givenN}개 줌)</button>`:''}${g.W.length?`<button data-tforgive="${ids}">🧽 경고 지우기</button>`:''}<button data-thide="${esc(g.key)}">${hid[g.key]?'👀 다시 보이기':'🙈 명단에서 숨기기'}</button><button data-treset="${ids}" class="danger">🧹 기록 지우기</button></div>
       ${g.n>1?`<div class="tSmall">여러 기기에서 들어온 기록 ${g.n}개를 한 명으로 합쳐 보여 줘요.</div>`:''}</div>`:''}`;}).join('')+'</div>'
     :`<div class="empty">${tFilter==='all'&&!tQuery?'아직 들어온 학생이 없어요.':'해당하는 학생이 없어요.'}</div>`;
   if(!keepForm||!$('#tForm').dataset.ready)fillTeacherForm();}
@@ -89,13 +89,33 @@ document.addEventListener('DOMContentLoaded',()=>{});
 
 /* ---------- 간식 미션 · 학생 초기화 ---------- */
 let RESETV={},SNACKV={};let rsSub=false;
-function snackOK(id){const days=id===MYID?myDays:((STAMPS[id]&&STAMPS[id].days)||{});const wn=warnsOf(id).length;const st=Math.max(0,Object.keys(days||{}).length-wn);const per={};(DATA.logs||[]).filter(l=>l.by===id).forEach(l=>{const k=dkey(new Date(l.ts||0));per[k]=(per[k]||0)+(+l.sec||0);});const sd=Object.values(per).filter(v=>v>=3600).length;return {ok:st>=3&&sd>=3,st,sd,wn,given:!!SNACKV[id]};}
-function renderSnack(){const el=document.getElementById('snackBox');if(!el)return;if(ADMIN_ON){el.innerHTML='';return;}const r=snackOK(MYID);
-  el.innerHTML=r.ok?(r.given?`<div class="snack" style="animation:none">🍪 간식을 받았어요! 계속 꾸준히 해 봐요 💪</div>`:`<div class="snack">🍪 교무실로 와서 송현쌤께 간식을 받아가세요</div>`)
-    :`<div class="ms"><span class="msI">🍪</span><div class="msM"><b>간식 미션</b><small>도장 3개 · 1시간 넘게 공부한 날 3일을 채우면 간식을 받아요</small><i class="msBar"><u style="width:${Math.round((Math.min(3,r.st)+Math.min(3,r.sd))/6*100)}%"></u></i></div><em>도장 ${Math.min(3,r.st)}/3<br>공부 ${Math.min(3,r.sd)}/3</em></div>`;
-  if(r.wn)el.innerHTML+=`<div class="ms" style="background:#fdecea"><span class="msI">⚠️</span><div class="msM"><b>고운 말 경고 ${r.wn}회</b><small>욕설·패드립을 쓰면 간식 미션 도장이 1개씩 빠져요 (과자점 엽전도 5냥씩)</small></div></div>`;}
+/* 🍪 간식 5단계: [하루 몇 분 이상, 며칠 연속, 앞 단계 날짜 제외] */
+const SNACK_ST=[[30,3,0],[60,2,0],[60,3,1],[120,2,0],[120,3,1]];
+const snackTxt=i=>{const [m,n]=SNACK_ST[i];return `하루 ${m>=60?m/60+'시간':m+'분'} 이상 · ${n}일 연속${SNACK_ST[i][2]?' (앞 단계 날 빼고)':''}`;};
+function snackGiven(ids){return Math.max(0,...ids.map(id=>{const v=SNACKV[id];return (typeof v==='number'&&v>=1&&v<=5)?v:0;}));}
+function snackCalc(per,W,givenN){const dn=k=>Math.round(new Date(k+'T12:00:00').getTime()/864e5);const keys=Object.keys(per).sort();const tdn=dn(dkey(new Date()));
+  let prev=-1e9;const done=[];let prog=null;
+  for(let i=0;i<SNACK_ST.length;i++){const [m,need,fresh]=SNACK_ST[i];const ok=keys.filter(k=>per[k]>=m*60&&(!fresh||dn(k)>prev)).map(dn);
+    let st=0,last=null,hit=null;for(const d of ok){st=(last!=null&&d===last+1)?st+1:1;last=d;if(st>=need){hit=d;break;}}
+    if(hit!=null){const d=Math.max(hit,prev);done.push(d);prev=d;continue;}
+    const okSet=new Set(ok);let end=okSet.has(tdn)?tdn:tdn-1,run=0;while(okSet.has(end-run))run++;
+    prog={i,need,min:m,streak:Math.min(run,need-1),today:Math.round((per[dkey(new Date())]||0)/60)};break;}
+  const wd=(W||[]).map(w=>dn(dkey(new Date(w.ts||0)))).sort((a,b)=>a-b);let wi=0,lost=0;
+  done.forEach(d=>{if(wi<wd.length&&wd[wi]<=d){wi++;lost++;}});const pend=wd.length-wi;
+  const earned=done.length-lost;const avail=Math.max(0,earned-givenN);
+  return {stages:done.length,lost,pend,earned,givenN,avail,ok:avail>0,prog,all:done.length>=SNACK_ST.length};}
+function perOf(ids){const S=new Set(ids);const per={};(DATA.logs||[]).filter(l=>S.has(l.by)).forEach(l=>{const k=dkey(new Date(l.ts||0));per[k]=(per[k]||0)+(+l.sec||0);});return per;}
+
+function snackOK(id){let ids=[id];try{if(id===MYID)ids=[MYID,...sameNickIds()];}catch(e){}const W=warnsOf(id);const r=snackCalc(perOf(ids),W,snackGiven(ids));r.wn=W.length;return r;}
+function renderSnack(){const el=document.getElementById('snackBox');if(!el)return;if(ADMIN_ON){el.innerHTML='';return;}const r=snackOK(MYID);let h='';
+  if(r.ok)h+=`<div class="snack">🍪 교무실로 와서 송현쌤께 간식을 받아가세요${r.avail>1?` (${r.avail}개)`:''}</div>`;
+  if(r.all)h+=`<div class="ms"><span class="msI">🏆</span><div class="msM"><b>간식 미션 5단계 완주!</b><small>정말 대단해요. 이 꾸준함이 진짜 실력이에요</small></div></div>`;
+  else if(r.prog){const p=r.prog;const pct=Math.round((p.streak+Math.min(1,p.today/p.min)*(p.streak<p.need?1:0))/p.need*100);
+    h+=`<div class="ms"><span class="msI">🍪</span><div class="msM"><b>간식 미션 ${p.i+1}단계</b><small>${snackTxt(p.i)} · 오늘 ${p.today}/${p.min}분${p.today>=p.min?' ✅':''}</small><i class="msBar"><u style="width:${Math.min(100,pct)}%"></u></i></div><em>연속<br>${p.streak}/${p.need}일</em></div>`;}
+  if(r.wn)h+=`<div class="ms" style="background:#fdecea"><span class="msI">⚠️</span><div class="msM"><b>고운 말 경고 ${r.wn}회</b><small>욕설·패드립을 1번 쓰면 간식 1단계가 사라져요${r.pend?` · 다음 단계 간식 −${r.pend}`:''} (과자점 엽전도 5냥씩)</small></div></div>`;
+  el.innerHTML=h;}
 {const _rs=renderStamp;renderStamp=function(){_rs.apply(this,arguments);try{renderSnack();}catch(e){}};}
-function snackPop(){if(ADMIN_ON||!window.__entered)return;const r=snackOK(MYID);if(!r.ok||r.given)return;const k=dkey(new Date());if(LS.get('snackShown','')===k)return;LS.set('snackShown',k);
+function snackPop(){if(ADMIN_ON||!window.__entered)return;const r=snackOK(MYID);if(!r.ok)return;const k=dkey(new Date());if(LS.get('snackShown','')===k)return;LS.set('snackShown',k);
   let el=document.createElement('div');el.id='giftPop';el.innerHTML=`<div class="gpBox paper"><div class="gpConf">${'🍪🎉✨🍬'.repeat(3).split('').filter(c=>c.trim()).map((c,i)=>`<i style="left:${(i*37)%100}%;animation-delay:${(i%6)*.12}s">${c}</i>`).join('')}</div><div class="gpT">🍪 간식 미션 성공!</div><div class="snack" style="animation:none">교무실로 와서 송현쌤께 간식을 받아가세요</div><div class="gpB"><button class="primary" id="gpClose">알겠어요!</button></div></div>`;
   document.body.appendChild(el);try{chime();}catch(e){}el.addEventListener('click',e=>{if(e.target===el||e.target.closest('#gpClose'))el.remove();});}
 setInterval(snackPop,15000);
@@ -124,7 +144,7 @@ async function resetStudents(ids,all){if(!DB||MODE!=='shared'){toast('학당이 
     const ids=k=>String(k||'').split(',').filter(Boolean);
     const r=e.target.closest('[data-treset]');if(r){const L=ids(r.dataset.treset);if(confirm(`${nameOf(L[0])} 학생의 기록(출석·공부·독후감 등)을 모두 지우고 처음부터 시작하게 할까요?`))resetStudents(L,false);return;}
     const fg=e.target.closest('[data-tforgive]');if(fg){if(!confirm('이 학생의 고운 말 경고를 모두 지울까요?'))return;const W=[];ids(fg.dataset.tforgive).forEach(id=>warnsOf(id).forEach(w=>{if(!W.some(x=>x.id===w.id))W.push(w);}));try{await Promise.all(W.map(w=>DB.collection('warns').doc(w.id).delete()));toast('경고를 지웠어요');}catch(err){toast('지우지 못했어요');}return;}
-    const g=e.target.closest('[data-tsnack]');if(g){const L=ids(g.dataset.tsnack);const on=!L.some(id=>SNACKV[id]);const o={};L.forEach(id=>o[id]=on?Date.now():null);try{await DB.doc('settings/snack').update(o);toast(on?'🍪 간식 준 것으로 표시했어요':'간식 표시를 취소했어요');}catch(err){toast('저장하지 못했어요');}return;}
+    const g=e.target.closest('[data-tsnack]');if(g){const L=ids(g.dataset.tsnack);const n=Math.max(0,Math.min(5,+g.dataset.n||0));const o={};L.forEach(id=>o[id]=n||null);try{await DB.doc('settings/snack').update(o);toast(n>snackGiven(L)?'🍪 간식 준 것으로 표시했어요':'간식 1개를 취소했어요');}catch(err){toast('저장하지 못했어요');}return;}
     const h=e.target.closest('[data-thide]');if(h){const H=LS.get('tHidden',{});const k=h.dataset.thide;if(H[k])delete H[k];else H[k]=Date.now();LS.set('tHidden',H);toast(H[k]?'명단에서 숨겼어요<small>‘숨김’ 칸에서 다시 볼 수 있어요</small>':'다시 보이게 했어요');tOpen='';renderTeacher(true);return;}
     const row=e.target.closest('[data-open-g]');if(row){tOpen=tOpen===row.dataset.openG?'':row.dataset.openG;renderTeacher(true);}});})();
 

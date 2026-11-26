@@ -441,7 +441,7 @@ function renderChat(){const el=$('#chatLog');if(!el)return;const LIST=CHAT.filte
 /* ---------- 고운 말 지킴이 ---------- */
 function warnsOf(id){const ids=new Set([id]);try{if(id===MYID)sameNickIds().forEach(x=>ids.add(x));}catch(e){}return (DATA.warns||[]).filter(w=>ids.has(w.by));}
 function badBlock(t){if(ADMIN_ON||!window.BadWords)return false;const r=BadWords.check(t);if(!r)return false;
-  const pae=r.kind==='패드립';toast(`${pae?'🚫 가족을 욕하는 말(패드립)':'🚫 욕설'}은 쓸 수 없어요<small>고운 말 경고가 1번 쌓여서 간식 미션 도장이 1개 빠지고, 과자점 엽전도 5냥 줄어요</small>`);
+  const pae=r.kind==='패드립';toast(`${pae?'🚫 가족을 욕하는 말(패드립)':'🚫 욕설'}은 쓸 수 없어요<small>고운 말 경고가 1번 쌓여서 간식 1단계가 사라지고, 과자점 엽전도 5냥 줄어요</small>`);
   if(DB&&MYID!=='me'){try{DB.collection('warns').add({by:MYID,nick:(ST.nick||'').slice(0,12),kind:r.kind,t:String(t).slice(0,80),sp:ST.space||'',ts:Date.now()});}catch(e){}}
   else{DATA.warns.unshift({by:MYID,kind:r.kind,ts:Date.now()});}
   return true;}
